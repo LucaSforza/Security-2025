@@ -37,3 +37,25 @@ This code is wild. Can we modify anything we want in the project.?
 ## Da mettere nella relazione
 
 Utilizzerò un approccio Agile. Per ogni parte del progetto farò analisi e poi progettazione. Quando passo alla fase successiva torno all'analisi.
+
+## Altre modifiche
+
+```Solidity
+interface ILotteryReceiver {
+    function joinLottery(address lot, uint256 r) external;
+    function revealLottery(address lot, uint256 r) external;
+}
+
+interface ITaxpayer is ILotteryReceiver {
+    function marry(address newSpouse) external;
+    function divorce() external;
+    function transferAllowance(uint256 change) external;
+    function age() external view returns (uint256 _age);
+    function setTaxAllowance(uint256 ta) external;
+}
+```
+
+Taxpayer è un'interfaccia cosi da poter implementare ERC165.
+
+tolta la funzione `haveBirthday` e aggiunto attributo birthday public.
+

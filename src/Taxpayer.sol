@@ -3,19 +3,40 @@ pragma solidity ^0.8.22;
 
 import {Lottery} from "./Lottery.sol";
 
-contract Taxpayer {
-    uint256 age; // This is wrong! a taxpayer should increment his age every birthday manually
-        // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
+import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
-    bool isMarried;
+interface ILotteryReceiver {
+    function joinLottery(address lot, uint256 r) external;
+    function revealLottery(address lot, uint256 r) external;
+}
 
-    bool iscontract; // Can we do better using ERC-165
+interface ITaxpayer is ILotteryReceiver, IERC165 {
+    function marry(address newSpouse) external;
+    function divorce() external;
+    function isMarried() external returns (bool);
+    function transferAllowance(uint256 change) external;
+    function age() external view returns (uint256 _age);
+    function setTaxAllowance(uint256 ta) external;
+}
+
+contract Taxpayer is ITaxpayer {
+    // uint256 age; This is wrong! a taxpayer should increment his age every birthday manually
+    // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
+    uint256 public birthday; // changed created attribute public
+
+    // bool public isMarried; changed in to a function, more GAS efficient
+    function isMarried() public view returns (bool) {
+        return spouse != address(0);
+    }
+
+    // bool iscontract; changed Can we do better using ERC-165
 
     /* Reference to spouse if person is married, address(0) otherwise */
-    address spouse; // How check that the spouse is married to us?
+    address public spouse; // How check that the spouse is married to us?
+    // changed in to public
 
-    address parent1;
-    address parent2;
+    address public parent1; // changed in to public
+    address public parent2;
 
     /* Constant default income tax allowance */
     uint256 constant DEFAULT_ALLOWANCE = 5000;
@@ -24,58 +45,70 @@ contract Taxpayer {
     uint256 constant ALLOWANCE_OAP = 7000;
 
     /* Income tax allowance */
-    uint256 taxAllowance;
+    uint256 public taxAllowance;
+    /* function getTaxAllowance() public view returns (uint256) {
+        return taxAllowance;
+    } 
+    changed instead of using this function just place taxAllowance as public TODO: english
+    */
 
-    uint256 income;
+    uint256 public income; // changed to public
 
-    uint256 rev;
+    uint256 private rev; // changed must be private
 
     //Parents are taxpayers
-    constructor(address p1, address p2) {
-        age = 0;
-        isMarried = false;
+    constructor(address p1, address p2, uint256 _birthday) {
+        // changed new constructor argument and pre-condition to check if the birthday is consistent
+        // changed pre-condition about the interface of parents
+        require(_birthday < block.timestamp, "not possible to create a Taxpayer of someone not born yet");
+        require(_callErc165(p1, type(ITaxpayer).interfaceId) && _callErc165(p1, type(ITaxpayer).interfaceId), "parent1 or parent2 is not a Taxpayer");
+        birthday = _birthday;
         parent1 = p1;
         parent2 = p2;
         spouse = address(0);
         income = 0;
         taxAllowance = DEFAULT_ALLOWANCE;
-        iscontract = true;
+    }
+
+    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
+        if (interfaceId == 0xffffffff) {
+            return false;
+        }
+        return interfaceId == type(IERC165).interfaceId || interfaceId == type(ITaxpayer).interfaceId
+            || interfaceId == type(ILotteryReceiver).interfaceId;
     }
 
     //We require newSpouse != address(0);
     function marry(address newSpouse) public {
         spouse = newSpouse;
-        isMarried = true;
     }
 
     function divorce() public {
         spouse = address(0);
-        isMarried = false;
     }
 
     /* Transfer part of tax allowance to own spouse */
     function transferAllowance(uint256 change) public {
         taxAllowance = taxAllowance - change;
         Taxpayer sp = Taxpayer(address(spouse));
-        sp.setTaxAllowance(sp.getTaxAllowance() + change);
+        sp.setTaxAllowance(sp.taxAllowance() + change);
     }
 
-    function haveBirthday() public {
-        age++;
+    function age() public view returns (uint256 _age) {
+        _age = block.timestamp - birthday;
     }
 
     function setTaxAllowance(uint256 ta) public {
-        require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
+        // require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
+        // This pre-condition is wrong. Use ERC-165 instead
+        require(_callErc165(address(msg.sender), type(ITaxpayer).interfaceId) || Lottery(msg.sender).isContract(), "Not ITaxpayer or Lottery");
+        // TODO: add ERC-165 to Lottery
         taxAllowance = ta;
     }
 
-    function getTaxAllowance() public view returns (uint256) {
-        return taxAllowance;
-    }
-
-    function isContract() public view returns (bool) {
+    /* function isContract() public view returns (bool) {
         return iscontract;
-    }
+    } it is useless if we are using ERC-165 */
 
     function joinLottery(address lot, uint256 r) public {
         // What if we joing more than one lottery?
@@ -88,5 +121,12 @@ contract Taxpayer {
         Lottery l = Lottery(lot);
         l.reveal(r);
         rev = 0;
+    }
+
+    function _callErc165(address toVerify, bytes4 interfaceId) internal view returns(bool) {
+        (bool success, bytes memory result) = msg.sender.staticcall(
+            abi.encodeWithSelector(IERC165(toVerify).supportsInterface.selector, interfaceId)
+        );
+        return success && result.length == 32 && abi.decode(result, (bool));
     }
 }
