@@ -9,7 +9,7 @@ contract Taxpayer {
 
     bool isMarried;
 
-    bool iscontract; // Can we do better using ERC-162
+    bool iscontract; // Can we do better using ERC-165
 
     /* Reference to spouse if person is married, address(0) otherwise */
     address spouse; // How check that the spouse is married to us?
