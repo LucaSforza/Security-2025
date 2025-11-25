@@ -4,14 +4,15 @@ pragma solidity ^0.8.22;
 import {Lottery} from "./Lottery.sol";
 
 contract Taxpayer {
-    uint256 age;
+    uint256 age; // This is wrong! a taxpayer should increment his age every birthday manually
+                 // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
 
     bool isMarried;
 
-    bool iscontract;
+    bool iscontract; // Can we do better using ERC-162
 
     /* Reference to spouse if person is married, address(0) otherwise */
-    address spouse;
+    address spouse; // How check that the spouse is married to us?
 
     address parent1;
     address parent2;
@@ -77,6 +78,7 @@ contract Taxpayer {
     }
 
     function joinLottery(address lot, uint256 r) public {
+        // What if we joing more than one lottery?
         Lottery l = Lottery(lot);
         l.commit(keccak256(abi.encode(r)));
         rev = r;

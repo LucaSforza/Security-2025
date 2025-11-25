@@ -23,3 +23,17 @@ note[mixed-case-variable]: mutable variables should use mixedCase
 `
 
 Risolte queste note sullo stile.
+
+## Question 
+
+```Solidity
+function haveBirthday() public {
+    age++;
+}
+```
+
+This code is wild. Can we modify anything we want in the project.?
+
+## Da mettere nella relazione
+
+Utilizzerò un approccio Agile. Per ogni parte del progetto farò analisi e poi progettazione. Quando passo alla fase successiva torno all'analisi.
