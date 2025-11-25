@@ -5,7 +5,7 @@ import {Lottery} from "./Lottery.sol";
 
 contract Taxpayer {
     uint256 age; // This is wrong! a taxpayer should increment his age every birthday manually
-                 // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
+        // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
 
     bool isMarried;
 
