@@ -66,11 +66,18 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         // changed new constructor argument and pre-condition to check if the birthday is consistent
         // changed pre-condition about the interface of parents
         require(_birthday < block.timestamp, "not possible to create a Taxpayer of someone not born yet");
-        require(
-            doesContractImplementInterface(address(msg.sender), type(ITaxpayer).interfaceId) 
-            && doesContractImplementInterface(address(msg.sender), type(ITaxpayer).interfaceId)
-            , "parent1 or parent2 is not a Taxpayer"
-        );
+        if(p1 != address(0)) {
+            require(
+                doesContractImplementInterface(p1, type(ITaxpayer).interfaceId),
+                "parent1 is not a Taxpayer"
+            );
+        }
+        if(p2 != address(0)) {
+            require(
+                doesContractImplementInterface(p2, type(ITaxpayer).interfaceId),
+                "parent2 is not a Taxpayer"
+            );
+        }
         birthday = _birthday;
         parent1 = p1;
         parent2 = p2;
