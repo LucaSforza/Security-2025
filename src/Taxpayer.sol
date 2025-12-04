@@ -5,6 +5,8 @@ import {Lottery} from "./Lottery.sol";
 
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
+import {ERC165Query} from "./ERC165Query.sol";
+
 interface ILotteryReceiver {
     function joinLottery(address lot, uint256 r) external;
     function revealLottery(address lot, uint256 r) external;
@@ -13,13 +15,15 @@ interface ILotteryReceiver {
 interface ITaxpayer is ILotteryReceiver, IERC165 {
     function marry(address newSpouse) external;
     function divorce() external;
-    function isMarried() external returns (bool);
+    function isMarried() external view returns (bool);
+    function getSpouse() external view returns (address);
     function transferAllowance(uint256 change) external;
     function age() external view returns (uint256 _age);
     function setTaxAllowance(uint256 ta) external;
+    function getTaxAllowance() external view returns(uint256 allowance);
 }
 
-contract Taxpayer is ITaxpayer {
+contract Taxpayer is ITaxpayer, ERC165Query {
     // uint256 age; This is wrong! a taxpayer should increment his age every birthday manually
     // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
     uint256 public birthday; // changed created attribute public
@@ -45,7 +49,8 @@ contract Taxpayer is ITaxpayer {
     uint256 constant ALLOWANCE_OAP = 7000;
 
     /* Income tax allowance */
-    uint256 public taxAllowance;
+    uint256 private taxAllowance;
+    // TODO: create a getter
     /* function getTaxAllowance() public view returns (uint256) {
         return taxAllowance;
     } 
@@ -61,7 +66,11 @@ contract Taxpayer is ITaxpayer {
         // changed new constructor argument and pre-condition to check if the birthday is consistent
         // changed pre-condition about the interface of parents
         require(_birthday < block.timestamp, "not possible to create a Taxpayer of someone not born yet");
-        require(_callErc165(p1, type(ITaxpayer).interfaceId) && _callErc165(p1, type(ITaxpayer).interfaceId), "parent1 or parent2 is not a Taxpayer");
+        require(
+            doesContractImplementInterface(address(msg.sender), type(ITaxpayer).interfaceId) 
+            && doesContractImplementInterface(address(msg.sender), type(ITaxpayer).interfaceId)
+            , "parent1 or parent2 is not a Taxpayer"
+        );
         birthday = _birthday;
         parent1 = p1;
         parent2 = p2;
@@ -91,7 +100,7 @@ contract Taxpayer is ITaxpayer {
     function transferAllowance(uint256 change) public {
         taxAllowance = taxAllowance - change;
         Taxpayer sp = Taxpayer(address(spouse));
-        sp.setTaxAllowance(sp.taxAllowance() + change);
+        sp.setTaxAllowance(sp.getTaxAllowance() + change);
     }
 
     function age() public view returns (uint256 _age) {
@@ -101,7 +110,10 @@ contract Taxpayer is ITaxpayer {
     function setTaxAllowance(uint256 ta) public {
         // require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
         // This pre-condition is wrong. Use ERC-165 instead
-        require(_callErc165(address(msg.sender), type(ITaxpayer).interfaceId) || Lottery(msg.sender).isContract(), "Not ITaxpayer or Lottery");
+        require(
+            doesContractImplementInterface(address(msg.sender), type(ITaxpayer).interfaceId) || 
+            Lottery(msg.sender).isContract(), "Not ITaxpayer or Lottery"
+        );
         // TODO: add ERC-165 to Lottery
         taxAllowance = ta;
     }
@@ -110,6 +122,14 @@ contract Taxpayer is ITaxpayer {
         return iscontract;
     } it is useless if we are using ERC-165 */
 
+    function getSpouse() external view returns (address) {
+        return spouse;
+    }
+
+    function getTaxAllowance() external view returns(uint256 allowance) {
+        return taxAllowance;
+    }
+    
     function joinLottery(address lot, uint256 r) public {
         // What if we joing more than one lottery?
         Lottery l = Lottery(lot);
@@ -121,12 +141,5 @@ contract Taxpayer is ITaxpayer {
         Lottery l = Lottery(lot);
         l.reveal(r);
         rev = 0;
-    }
-
-    function _callErc165(address toVerify, bytes4 interfaceId) internal view returns(bool) {
-        (bool success, bytes memory result) = msg.sender.staticcall(
-            abi.encodeWithSelector(IERC165(toVerify).supportsInterface.selector, interfaceId)
-        );
-        return success && result.length == 32 && abi.decode(result, (bool));
     }
 }
