@@ -96,6 +96,9 @@ contract Taxpayer is ITaxpayer, ERC165Query {
 
     //We require newSpouse != address(0);
     function marry(address newSpouse) public {
+        require(newSpouse != address(0), "the spouse must not be zero");
+        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId),
+            "the spouse must be a taxpayer");
         spouse = newSpouse;
     }
 
