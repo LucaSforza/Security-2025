@@ -43,19 +43,13 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     address public parent2;
 
     /* Constant default income tax allowance */
-    uint256 constant DEFAULT_ALLOWANCE = 5000;
+    uint256 public constant DEFAULT_ALLOWANCE = 5000;
 
     /* Constant income tax allowance for Older Taxpayers over 65 */
-    uint256 constant ALLOWANCE_OAP = 7000;
+    uint256 public constant ALLOWANCE_OAP = 7000;
 
     /* Income tax allowance */
     uint256 private taxAllowance;
-    // TODO: create a getter
-    /* function getTaxAllowance() public view returns (uint256) {
-        return taxAllowance;
-    } 
-    changed instead of using this function just place taxAllowance as public TODO: english
-    */
 
     uint256 public income; // changed to public
 
@@ -108,6 +102,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
 
     /* Transfer part of tax allowance to own spouse */
     function transferAllowance(uint256 change) public {
+        require(isMarried(), "you must be married to transfer allowance");
         taxAllowance = taxAllowance - change;
         Taxpayer sp = Taxpayer(address(spouse));
         sp.setTaxAllowance(sp.getTaxAllowance() + change);

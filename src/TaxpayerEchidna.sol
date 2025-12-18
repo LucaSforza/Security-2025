@@ -15,8 +15,17 @@ contract TaxpayerEchidna is Taxpayer {
     // Invariante Echidna
     function echidna_check_spouse() public view returns (bool) {
         if(Taxpayer(this).getSpouse() != address(0)) {
-            return Taxpayer(Taxpayer(this).getSpouse()).getSpouse() == address(this);
+          // return false;
+          return Taxpayer(Taxpayer(this).getSpouse()).getSpouse() == address(this);
         }
         return true;
+    }
+
+    function echidna_check_tax_allowance() public view returns (bool) {
+      if(Taxpayer(this).getSpouse() != address(0)) {
+        Taxpayer spouse = Taxpayer(this.getSpouse());
+        // return false;
+        return spouse.getTaxAllowance() + this.getTaxAllowance() == DEFAULT_ALLOWANCE;
+      }
     }
 }
