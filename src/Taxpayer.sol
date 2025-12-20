@@ -20,7 +20,7 @@ interface ITaxpayer is ILotteryReceiver, IERC165 {
     function transferAllowance(uint256 change) external;
     function age() external view returns (uint256 _age);
     function setTaxAllowance(uint256 ta) external;
-    function getTaxAllowance() external view returns(uint256 allowance);
+    function getTaxAllowance() external view returns (uint256 allowance);
 }
 
 contract Taxpayer is ITaxpayer, ERC165Query {
@@ -60,17 +60,11 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         // changed new constructor argument and pre-condition to check if the birthday is consistent
         // changed pre-condition about the interface of parents
         require(_birthday < block.timestamp, "not possible to create a Taxpayer of someone not born yet");
-        if(p1 != address(0)) {
-            require(
-                doesContractImplementInterface(p1, type(ITaxpayer).interfaceId),
-                "parent1 is not a Taxpayer"
-            );
+        if (p1 != address(0)) {
+            require(doesContractImplementInterface(p1, type(ITaxpayer).interfaceId), "parent1 is not a Taxpayer");
         }
-        if(p2 != address(0)) {
-            require(
-                doesContractImplementInterface(p2, type(ITaxpayer).interfaceId),
-                "parent2 is not a Taxpayer"
-            );
+        if (p2 != address(0)) {
+            require(doesContractImplementInterface(p2, type(ITaxpayer).interfaceId), "parent2 is not a Taxpayer");
         }
         birthday = _birthday;
         parent1 = p1;
@@ -90,14 +84,23 @@ contract Taxpayer is ITaxpayer, ERC165Query {
 
     //We require newSpouse != address(0);
     function marry(address newSpouse) public {
-        require(newSpouse != address(0), "the spouse must not be zero");
-        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId),
-            "the spouse must be a taxpayer");
-        spouse = newSpouse;
+        if (!isMarried()) {
+            require(newSpouse != address(this));
+            require(
+                doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "the spouse must be a taxpayer"
+            );
+            spouse = newSpouse;
+            ITaxpayer(newSpouse).marry(address(this));
+        }
     }
 
     function divorce() public {
-        spouse = address(0);
+        // taxAllowance = DEFAULT_ALLOWANCE;
+        if(isMarried()) {
+          address oldSpouse = spouse
+          spouse = address(0);
+          ITaxpayer(spouse).divorce();
+        }
     }
 
     /* Transfer part of tax allowance to own spouse */
@@ -116,8 +119,9 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         // require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
         // This pre-condition is wrong. Use ERC-165 instead
         require(
-            doesContractImplementInterface(address(msg.sender), type(ITaxpayer).interfaceId) || 
-            Lottery(msg.sender).isContract(), "Not ITaxpayer or Lottery"
+            doesContractImplementInterface(address(msg.sender), type(ITaxpayer).interfaceId)
+                || Lottery(msg.sender).isContract(),
+            "Not ITaxpayer or Lottery"
         );
         // TODO: add ERC-165 to Lottery
         taxAllowance = ta;
@@ -131,10 +135,10 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         return spouse;
     }
 
-    function getTaxAllowance() external view returns(uint256 allowance) {
+    function getTaxAllowance() external view returns (uint256 allowance) {
         return taxAllowance;
     }
-    
+
     function joinLottery(address lot, uint256 r) public {
         // What if we joing more than one lottery?
         Lottery l = Lottery(lot);
