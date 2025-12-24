@@ -22,6 +22,8 @@ interface ITaxpayer is ILotteryReceiver, IERC165 {
     function setTaxAllowance(uint256 ta) external;
     function getTaxAllowance() external view returns (uint256 allowance);
     function getMaxTaxAllowance() external view returns (uint256 maxAllowance);
+    function redeemTaxAllowance() external;
+    function redeemTaxAllowanceOfSpouse() external;
 }
 
 contract Taxpayer is ITaxpayer, ERC165Query {
@@ -37,9 +39,35 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     /* Reference to spouse if person is married, address(0) otherwise */
     Marriage public marriage;
 
+    /* Constant default income tax allowance */
+    uint256 public constant DEFAULT_ALLOWANCE = 5000;
+
+    /* Constant income tax allowance for Older Taxpayers over 65 */
+    uint256 public constant ALLOWANCE_OAP = 7000;
+
+    uint256 public constant SIXTYFIVEYEARS = 60*60*24*365*65;
+
     // bool public isMarried; changed in to a function, more GAS efficient
     function isMarried() public view returns (bool) {
         return marriage.spouse != address(0);
+    }
+    
+    bool private redeemed;
+
+    function redeemTaxAllowance() external {
+      if (!redeemed && ITaxpayer(address(this)).age() >= SIXTYFIVEYEARS) {
+        redeemed = true;
+        allowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+        if (isMarried()) {
+          marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+          ITaxpayer(getSpouse()).redeemTaxAllowanceOfSpouse();
+        }
+      }
+    }
+
+    function redeemTaxAllowanceOfSpouse() external {
+      require(getSpouse() == msg.sender, "the caller must be the spouse");
+      marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
     }
 
     function getMaxTaxAllowance() external view returns (uint256 maxAllowance) {
@@ -55,11 +83,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     address public parent1; // changed in to public
     address public parent2;
 
-    /* Constant default income tax allowance */
-    uint256 public constant DEFAULT_ALLOWANCE = 5000;
-
-    /* Constant income tax allowance for Older Taxpayers over 65 */
-    uint256 public constant ALLOWANCE_OAP = 7000;
+    
 
     /* Income tax allowance */
     uint256 private taxAllowance;
@@ -84,6 +108,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         parent2 = p2;
         marriage.spouse = address(0);
         income = 0;
+        redeemed = false;
         taxAllowance = DEFAULT_ALLOWANCE;
     }
 
