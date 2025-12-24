@@ -89,6 +89,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
             require(
                 doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "the spouse must be a taxpayer"
             );
+            require(!ITaxpayer(newSpouse).isMarried(), "the spouse must not be married");
             spouse = newSpouse;
             ITaxpayer(newSpouse).marry(address(this));
         }
@@ -97,7 +98,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     function divorce() public {
         // taxAllowance = DEFAULT_ALLOWANCE;
         if(isMarried()) {
-          address oldSpouse = spouse
+          address oldSpouse = spouse;
           spouse = address(0);
           ITaxpayer(spouse).divorce();
         }
