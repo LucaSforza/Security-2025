@@ -39,51 +39,53 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     /* Reference to spouse if person is married, address(0) otherwise */
     Marriage public marriage;
 
+    function getSpouse() external view returns (address) {
+        return marriage.spouse;
+    }
+
     /* Constant default income tax allowance */
     uint256 public constant DEFAULT_ALLOWANCE = 5000;
 
     /* Constant income tax allowance for Older Taxpayers over 65 */
     uint256 public constant ALLOWANCE_OAP = 7000;
 
-    uint256 public constant SIXTYFIVEYEARS = 60*60*24*365*65;
+    uint256 public constant SIXTYFIVEYEARS = 60 * 60 * 24 * 365 * 65;
 
     // bool public isMarried; changed in to a function, more GAS efficient
     function isMarried() public view returns (bool) {
         return marriage.spouse != address(0);
     }
-    
+
     bool private redeemed;
 
     function redeemTaxAllowance() external {
-      if (!redeemed && ITaxpayer(address(this)).age() >= SIXTYFIVEYEARS) {
-        redeemed = true;
-        allowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
-        if (isMarried()) {
-          marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
-          ITaxpayer(getSpouse()).redeemTaxAllowanceOfSpouse();
+        if (!redeemed && ITaxpayer(address(this)).age() >= SIXTYFIVEYEARS) {
+            redeemed = true;
+            taxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+            if (isMarried()) {
+                marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+                ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse();
+            }
         }
-      }
     }
 
     function redeemTaxAllowanceOfSpouse() external {
-      require(getSpouse() == msg.sender, "the caller must be the spouse");
-      marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+        require(ITaxpayer(address(this)).getSpouse() == msg.sender, "the caller must be the spouse");
+        marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
     }
 
     function getMaxTaxAllowance() external view returns (uint256 maxAllowance) {
-      if (isMarried()) {
-        maxAllowance = marriage.maxAllowance;
-      } else {
-        maxAllowance = 0;
-      }
+        if (isMarried()) {
+            maxAllowance = marriage.maxAllowance;
+        } else {
+            maxAllowance = 0;
+        }
     }
 
     // bool iscontract; changed Can we do better using ERC-165
 
     address public parent1; // changed in to public
     address public parent2;
-
-    
 
     /* Income tax allowance */
     uint256 private taxAllowance;
@@ -127,8 +129,8 @@ contract Taxpayer is ITaxpayer, ERC165Query {
             require(
                 doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "the spouse must be a taxpayer"
             );
-            if(ITaxpayer(newSpouse).isMarried()) {
-                 require(ITaxpayer(newSpouse).getSpouse() == address(this), "you cannot marry a married taxpayer");
+            if (ITaxpayer(newSpouse).isMarried()) {
+                require(ITaxpayer(newSpouse).getSpouse() == address(this), "you cannot marry a married taxpayer");
             }
             marriage.spouse = newSpouse;
             marriage.maxAllowance = Taxpayer(address(this)).getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
@@ -172,10 +174,6 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     /* function isContract() public view returns (bool) {
         return iscontract;
     } it is useless if we are using ERC-165 */
-
-    function getSpouse() external view returns (address) {
-        return marriage.spouse;
-    }
 
     function getTaxAllowance() external view returns (uint256 allowance) {
         return taxAllowance;
