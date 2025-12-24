@@ -21,6 +21,7 @@ interface ITaxpayer is ILotteryReceiver, IERC165 {
     function age() external view returns (uint256 _age);
     function setTaxAllowance(uint256 ta) external;
     function getTaxAllowance() external view returns (uint256 allowance);
+    function getMaxTaxAllowance() external view returns (uint256 maxAllowance);
 }
 
 contract Taxpayer is ITaxpayer, ERC165Query {
@@ -28,16 +29,28 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
     uint256 public birthday; // changed created attribute public
 
+    struct Marriage {
+        address spouse;
+        uint256 maxAllowance;
+    } // TODO: document
+
+    /* Reference to spouse if person is married, address(0) otherwise */
+    Marriage public marriage;
+
     // bool public isMarried; changed in to a function, more GAS efficient
     function isMarried() public view returns (bool) {
-        return spouse != address(0);
+        return marriage.spouse != address(0);
+    }
+
+    function getMaxTaxAllowance() external view returns (uint256 maxAllowance) {
+      if (isMarried()) {
+        maxAllowance = marriage.maxAllowance;
+      } else {
+        maxAllowance = 0;
+      }
     }
 
     // bool iscontract; changed Can we do better using ERC-165
-
-    /* Reference to spouse if person is married, address(0) otherwise */
-    address public spouse; // How check that the spouse is married to us?
-    // changed in to public
 
     address public parent1; // changed in to public
     address public parent2;
@@ -69,7 +82,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         birthday = _birthday;
         parent1 = p1;
         parent2 = p2;
-        spouse = address(0);
+        marriage.spouse = address(0);
         income = 0;
         taxAllowance = DEFAULT_ALLOWANCE;
     }
@@ -90,17 +103,18 @@ contract Taxpayer is ITaxpayer, ERC165Query {
                 doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "the spouse must be a taxpayer"
             );
             require(!ITaxpayer(newSpouse).isMarried(), "the spouse must not be married");
-            spouse = newSpouse;
+            marriage.spouse = newSpouse;
+            marriage.maxAllowance = Taxpayer(address(this)).getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
             ITaxpayer(newSpouse).marry(address(this));
         }
     }
 
     function divorce() public {
         // taxAllowance = DEFAULT_ALLOWANCE;
-        if(isMarried()) {
-          address oldSpouse = spouse;
-          spouse = address(0);
-          ITaxpayer(spouse).divorce();
+        if (isMarried()) {
+            address oldSpouse = marriage.spouse;
+            marriage.spouse = address(0); // non serve mettere maxTaxAllowance a zero. Più gas efficient
+            ITaxpayer(oldSpouse).divorce();
         }
     }
 
@@ -108,7 +122,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     function transferAllowance(uint256 change) public {
         require(isMarried(), "you must be married to transfer allowance");
         taxAllowance = taxAllowance - change;
-        Taxpayer sp = Taxpayer(address(spouse));
+        ITaxpayer sp = ITaxpayer(address(marriage.spouse));
         sp.setTaxAllowance(sp.getTaxAllowance() + change);
     }
 
@@ -133,7 +147,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     } it is useless if we are using ERC-165 */
 
     function getSpouse() external view returns (address) {
-        return spouse;
+        return marriage.spouse;
     }
 
     function getTaxAllowance() external view returns (uint256 allowance) {

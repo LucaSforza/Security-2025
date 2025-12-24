@@ -26,9 +26,28 @@ contract EchidnaTesting {
         return true;
     }
 
+    function check_tax_allowance(uint256 index) internal view returns (bool) {
+        Taxpayer t = taxpayers[index];
+        if (t.isMarried()) {
+            Taxpayer spouse = Taxpayer(t.getSpouse());
+            uint256 maxAllowance = t.getTaxAllowance() + spouse.getTaxAllowance();
+            return maxAllowance == t.getMaxTaxAllowance() && maxAllowance == spouse.getMaxTaxAllowance();
+        }
+        return true;
+    }
+
     function echidna_check_spouse() public view returns (bool) {
         for (uint256 index = 0; index < taxpayers.length; index++) {
             if (!check_spouse(index)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function echidna_check_tax_allowance() public view returns (bool) {
+        for (uint256 index = 0; index < taxpayers.length; index++) {
+            if (!check_tax_allowance(index)) {
                 return false;
             }
         }
