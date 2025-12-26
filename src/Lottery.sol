@@ -1,9 +1,28 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {Taxpayer} from "./Taxpayer.sol";
+import {ITaxpayer, ILotteryReceiver} from "./Taxpayer.sol";
 
-contract Lottery {
+import {IERC165} from "forge-std/interfaces/IERC165.sol";
+
+import {ERC165Query} from "./ERC165Query.sol";
+
+import "./BokkyPooBahsDateTimeLibrary.sol";
+
+using BokkyPooBahsDateTimeLibrary for uint256;
+
+interface ILottery is IERC165 {
+
+}
+
+contract Lottery is ILottery, ERC165Query {
+    
+    mapping(bytes4 => bool) supportedInterfaces;
+
+    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
+      return supportedInterfaces[interfaceId];
+    }
+
     address owner;
     mapping(address => bytes32) commits;
     mapping(address => uint256) reveals;
@@ -13,14 +32,15 @@ contract Lottery {
     uint256 revealTime;
     uint256 endTime;
     uint256 period;
-    bool iscontract;
 
     // Initialize the registry with the lottery period.
     constructor(uint256 p) {
         period = p;
         startTime = 0;
         endTime = 0;
-        iscontract = true;
+        
+        supportedInterfaces[type(IERC165).interfaceId] = true;
+        supportedInterfaces[type(ILottery).interfaceId] = true;
     }
 
     //If the lottery has not started, anyone can invoke a lottery.
@@ -55,13 +75,10 @@ contract Lottery {
         for (uint256 i = 0; i < revealed.length; i++) {
             total += reveals[revealed[i]];
         }
-        Taxpayer(revealed[total % revealed.length]).setTaxAllowance(7000);
+        ITaxpayer(revealed[total % revealed.length]).setTaxAllowance(7000);
         startTime = 0;
         revealTime = 0;
         endTime = 0;
     }
 
-    function isContract() public view returns (bool) {
-        return iscontract;
-    }
 }

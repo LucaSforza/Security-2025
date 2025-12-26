@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {Lottery} from "./Lottery.sol";
+import {Lottery, ILottery} from "./Lottery.sol";
 
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
@@ -188,7 +188,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         // This pre-condition is wrong. Use ERC-165 instead
         require(
             doesContractImplementInterface(address(msg.sender), type(ITaxpayer).interfaceId)
-                || Lottery(msg.sender).isContract(),
+                || doesContractImplementInterface(address(msg.sender), type(ILottery).interfaceId),
             "Not ITaxpayer or Lottery"
         );
         // TODO: add ERC-165 to Lottery
