@@ -10,12 +10,16 @@ contract EchidnaTesting {
         addTaxpayer();
         addTaxpayer();
         addTaxpayer();
-        addTaxpayer();
-        addTaxpayer();
+        addOldTaxpayer();
+        addOldTaxpayer();
     }
 
     function addTaxpayer() internal {
-        taxpayers.push(new Taxpayer(address(0), address(0), 1041379200));
+        taxpayers.push(new Taxpayer(address(0), address(0), 28, 5, 2003));
+    }
+
+    function addOldTaxpayer() internal {
+        taxpayers.push(new Taxpayer(address(0), address(0), 28, 5, 1950));
     }
 
     function check_spouse(uint256 index) internal view returns (bool) {

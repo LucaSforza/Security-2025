@@ -7,6 +7,10 @@ import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
 import {ERC165Query} from "./ERC165Query.sol";
 
+import "./BokkyPooBahsDateTimeLibrary.sol";
+
+using BokkyPooBahsDateTimeLibrary for uint256;
+
 interface ILotteryReceiver {
     function joinLottery(address lot, uint256 r) external;
     function revealLottery(address lot, uint256 r) external;
@@ -29,13 +33,20 @@ interface ITaxpayer is ILotteryReceiver, IERC165 {
 contract Taxpayer is ITaxpayer, ERC165Query {
     // uint256 age; This is wrong! a taxpayer should increment his age every birthday manually
     // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
-    uint256 immutable public birthday; // changed created attribute public
 
     struct Marriage {
         address spouse;
         uint256 maxAllowance;
     } // TODO: document
 
+    struct BirthDate {
+        uint16 year;
+        uint8 month;
+        uint8 day;
+    }
+
+    BirthDate public birthday; // changed created attribute public
+    
     /* Reference to spouse if person is married, address(0) otherwise */
     Marriage public marriage;
 
@@ -49,7 +60,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     /* Constant income tax allowance for Older Taxpayers over 65 */
     uint256 public constant ALLOWANCE_OAP = 7000;
 
-    uint256 public constant SIXTYFIVEYEARS = 60 * 60 * 24 * 365 * 65;
+    uint256 public constant AGE_THREASHOLD = 65;
 
     // bool public isMarried; changed in to a function, more GAS efficient
     function isMarried() public view returns (bool) {
@@ -59,7 +70,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     bool private redeemed;
 
     function redeemTaxAllowance() external {
-        if (!redeemed && ITaxpayer(address(this)).age() >= SIXTYFIVEYEARS) {
+        if (!redeemed && ITaxpayer(address(this)).age() >= AGE_THREASHOLD) {
             redeemed = true;
             taxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
             if (isMarried()) {
@@ -81,11 +92,10 @@ contract Taxpayer is ITaxpayer, ERC165Query {
             maxAllowance = 0;
         }
     }
-
     // bool iscontract; changed Can we do better using ERC-165
 
-    address immutable public parent1; // changed in to public
-    address immutable public parent2;
+    address public immutable parent1; // changed in to public
+    address public immutable parent2;
 
     /* Income tax allowance */
     uint256 private taxAllowance;
@@ -95,17 +105,18 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     uint256 private rev; // changed must be private
 
     //Parents are taxpayers
-    constructor(address p1, address p2, uint256 _birthday) {
+    constructor(address p1, address p2, uint8 day, uint8 month, uint16 year) {
         // changed new constructor argument and pre-condition to check if the birthday is consistent
         // changed pre-condition about the interface of parents
-        require(_birthday < block.timestamp, "not possible to create a Taxpayer of someone not born yet");
+        require(month > 0 && month <= 12);
+        require(day > 0 && day <= 31);
         if (p1 != address(0)) {
             require(doesContractImplementInterface(p1, type(ITaxpayer).interfaceId), "parent1 is not a Taxpayer");
         }
         if (p2 != address(0)) {
             require(doesContractImplementInterface(p2, type(ITaxpayer).interfaceId), "parent2 is not a Taxpayer");
         }
-        birthday = _birthday;
+        birthday = BirthDate(year, month, day);
         parent1 = p1;
         parent2 = p2;
         marriage.spouse = address(0);
@@ -155,8 +166,21 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         sp.setTaxAllowance(sp.getTaxAllowance() + change);
     }
 
-    function age() public view returns (uint256 _age) {
-        _age = block.timestamp - birthday;
+    function age() public view returns (uint256) {
+        uint256 ts = block.timestamp;
+        BirthDate memory birth = birthday;
+
+        uint256 currentYear = ts.getYear();
+        uint256 currentMonth = ts.getMonth();
+        uint256 currentDay = ts.getDay();
+
+        uint256 age = currentYear - birth.year;
+
+        if (currentMonth < birth.month || (currentMonth == birth.month && currentDay < birth.day)) {
+            age -= 1;
+        }
+
+        return age;
     }
 
     function setTaxAllowance(uint256 ta) public {

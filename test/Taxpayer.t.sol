@@ -8,6 +8,6 @@ contract LotteryTest is Test {
     Taxpayer public taxpayer;
 
     function setUp() public {
-        taxpayer = new Taxpayer(address(0), address(0), block.timestamp);
+        // taxpayer = new Taxpayer(address(0), address(0), block.timestamp);
     }
 }
