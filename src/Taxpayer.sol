@@ -29,7 +29,7 @@ interface ITaxpayer is ILotteryReceiver, IERC165 {
 contract Taxpayer is ITaxpayer, ERC165Query {
     // uint256 age; This is wrong! a taxpayer should increment his age every birthday manually
     // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
-    uint256 public birthday; // changed created attribute public
+    uint256 immutable public birthday; // changed created attribute public
 
     struct Marriage {
         address spouse;
@@ -84,8 +84,8 @@ contract Taxpayer is ITaxpayer, ERC165Query {
 
     // bool iscontract; changed Can we do better using ERC-165
 
-    address public parent1; // changed in to public
-    address public parent2;
+    address immutable public parent1; // changed in to public
+    address immutable public parent2;
 
     /* Income tax allowance */
     uint256 private taxAllowance;
