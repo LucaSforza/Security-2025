@@ -12,15 +12,17 @@ import "./BokkyPooBahsDateTimeLibrary.sol";
 using BokkyPooBahsDateTimeLibrary for uint256;
 
 interface ILottery is IERC165 {
-
+    function startLottery() external;
+    function commit(bytes32 y) external;
+    function reveal(uint256 rev) external;
+    function endLottery() external;
 }
 
 contract Lottery is ILottery, ERC165Query {
-    
     mapping(bytes4 => bool) supportedInterfaces;
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
-      return supportedInterfaces[interfaceId];
+        return supportedInterfaces[interfaceId];
     }
 
     address owner;
@@ -38,7 +40,8 @@ contract Lottery is ILottery, ERC165Query {
         period = p;
         startTime = 0;
         endTime = 0;
-        
+        owner = msg.sender;
+
         supportedInterfaces[type(IERC165).interfaceId] = true;
         supportedInterfaces[type(ILottery).interfaceId] = true;
     }
@@ -57,6 +60,10 @@ contract Lottery is ILottery, ERC165Query {
     //A taxpayer send his own commitment.
     function commit(bytes32 y) public {
         require(block.timestamp >= startTime);
+        require(
+            doesContractImplementInterface(msg.sender, type(ITaxpayer).interfaceId),
+            "the contract doen't implement ITaxpayer interface"
+        );
         commits[msg.sender] = y;
     }
 
@@ -80,5 +87,4 @@ contract Lottery is ILottery, ERC165Query {
         revealTime = 0;
         endTime = 0;
     }
-
 }

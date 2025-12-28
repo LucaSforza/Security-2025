@@ -46,7 +46,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     }
 
     BirthDate public birthday; // changed created attribute public
-    
+
     /* Reference to spouse if person is married, address(0) otherwise */
     Marriage public marriage;
 
