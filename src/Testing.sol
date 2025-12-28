@@ -71,4 +71,40 @@ contract EchidnaTesting {
         }
         return true;
     }
+
+    function getAddress(uint256 index) internal view returns (address) {
+      return address(taxpayers[index]);
+    }
+
+    function getMaxWins() internal view returns (address maxAddress, uint256 maxValue) {
+      maxAddress = address(0);
+      maxValue = 0;
+      for (uint256 index = 0; index < taxpayers.length; index++) {
+        address t = getAddress(index);
+        uint256 w = wins[t];
+        if (w > maxValue) {
+          maxValue = w;
+          maxAddress = t;
+        }
+      }
+    }
+
+    function getMinWins() internal view returns (address minAddress, uint256 minValue) {
+      minAddress = getAddress(0);
+      minValue = wins[minAddress];
+      for (uint256 index = 1; index < taxpayers.length; index++) {
+        address t = getAddress(index);
+        uint256 w = wins[t];
+        if (w < minValue) {
+          minValue = w;
+          minAddress = t;
+        }
+      }
+    }
+
+    function echidna_check_lottery() public view returns (bool) {
+      (address minAddress, uint256 minValue) = getMinWins();
+      (address maxAddress, uint256 maxValue) = getMaxWins();
+      return (maxValue - minValue) < 10;
+    }
 }
