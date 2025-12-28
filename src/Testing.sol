@@ -2,9 +2,12 @@
 pragma solidity ^0.8.13;
 
 import {Taxpayer} from "../src/Taxpayer.sol";
+import {Lottery} from "../src/Lottery.sol";
 
 contract EchidnaTesting {
     Taxpayer[] taxpayers;
+    mapping(address => uint256) wins;
+    Lottery lottery;
 
     constructor() {
         addTaxpayer();
@@ -20,6 +23,17 @@ contract EchidnaTesting {
 
     function addOldTaxpayer() internal {
         taxpayers.push(new Taxpayer(address(0), address(0), 28, 5, 1950));
+    }
+
+    function create_lottery() public {
+      Lottery l = new Lottery(0);
+      lottery = l;
+    }
+
+    function endLottery() public {
+      require(address(lottery) != address(0));
+      address winner = lottery.endLottery();
+      wins[winner] += 1;
     }
 
     function check_spouse(uint256 index) internal view returns (bool) {

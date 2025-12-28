@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {ITaxpayer, ILotteryReceiver} from "./Taxpayer.sol";
+import {ILotteryReceiver} from "./Taxpayer.sol";
 
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
@@ -15,7 +15,7 @@ interface ILottery is IERC165 {
     function startLottery() external;
     function commit(bytes32 y) external;
     function reveal(uint256 rev) external;
-    function endLottery() external;
+    function endLottery() external returns (address);
 }
 
 contract Lottery is ILottery, ERC165Query {
@@ -61,8 +61,8 @@ contract Lottery is ILottery, ERC165Query {
     function commit(bytes32 y) public {
         require(block.timestamp >= startTime);
         require(
-            doesContractImplementInterface(msg.sender, type(ITaxpayer).interfaceId),
-            "the contract doen't implement ITaxpayer interface"
+            doesContractImplementInterface(msg.sender, type(ILotteryReceiver).interfaceId),
+            "the contract doen't implement ILotteryReceiver interface"
         );
         commits[msg.sender] = y;
     }
@@ -76,13 +76,14 @@ contract Lottery is ILottery, ERC165Query {
     }
 
     //Ends the lottery and compute the winner.
-    function endLottery() public {
+    // returns the address of the winner
+    function endLottery() public returns (address) {
         require(block.timestamp >= endTime);
         uint256 total = 0;
         for (uint256 i = 0; i < revealed.length; i++) {
             total += reveals[revealed[i]];
         }
-        ITaxpayer(revealed[total % revealed.length]).setTaxAllowance(7000);
+        ILotteryReceiver(revealed[total % revealed.length]).winLottery();
         startTime = 0;
         revealTime = 0;
         endTime = 0;

@@ -13,7 +13,8 @@ using BokkyPooBahsDateTimeLibrary for uint256;
 
 interface ILotteryReceiver {
     function joinLottery(address lot, uint256 r) external;
-    function revealLottery(address lot, uint256 r) external;
+    function revealLottery(uint256 r) external;
+    function winLottery() external;
 }
 
 interface ITaxpayer is ILotteryReceiver, IERC165 {
@@ -27,7 +28,7 @@ interface ITaxpayer is ILotteryReceiver, IERC165 {
     function getTaxAllowance() external view returns (uint256 allowance);
     function getMaxTaxAllowance() external view returns (uint256 maxAllowance);
     function redeemTaxAllowance() external;
-    function redeemTaxAllowanceOfSpouse() external;
+    function redeemTaxAllowanceOfSpouse(uint256 value) external;
 }
 
 contract Taxpayer is ITaxpayer, ERC165Query {
@@ -75,14 +76,14 @@ contract Taxpayer is ITaxpayer, ERC165Query {
             taxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
             if (isMarried()) {
                 marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
-                ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse();
+                ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse(ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
             }
         }
     }
 
-    function redeemTaxAllowanceOfSpouse() external {
+    function redeemTaxAllowanceOfSpouse(uint256 value) external {
         require(ITaxpayer(address(this)).getSpouse() == msg.sender, "the caller must be the spouse");
-        marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+        marriage.maxAllowance += value; // (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
     }
 
     function getMaxTaxAllowance() external view returns (uint256 maxAllowance) {
@@ -203,16 +204,31 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         return taxAllowance;
     }
 
+    address joinedLottery;
+
     function joinLottery(address lot, uint256 r) public {
         // What if we joing more than one lottery?
+        require(rev == 0, "cannot join more than one lottery");
+        require(doesContractImplementInterface(lot, type(ILottery).interfaceId), "lot is not a lottery");
         Lottery l = Lottery(lot);
         l.commit(keccak256(abi.encode(r)));
         rev = r;
+        joinedLottery = lot;
     }
 
-    function revealLottery(address lot, uint256 r) public {
-        Lottery l = Lottery(lot);
+    function revealLottery(uint256 r) public {
+        Lottery l = Lottery(joinedLottery);
         l.reveal(r);
         rev = 0;
+        joinedLottery = address(0);
+    }
+
+    function winLottery() external {
+      require(msg.sender == joinedLottery);
+      taxAllowance += 2000;
+      if (isMarried()) {
+        marriage.maxAllowance += 2000; // (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+        ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse(2000);
+      }
     }
 }
