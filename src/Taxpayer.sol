@@ -13,7 +13,7 @@ using BokkyPooBahsDateTimeLibrary for uint256;
 
 interface ILotteryReceiver {
     function joinLottery(address lot, uint256 r) external;
-    function revealLottery(uint256 r) external;
+    function revealLottery() external;
     function winLottery() external;
 }
 
@@ -76,7 +76,8 @@ contract Taxpayer is ITaxpayer, ERC165Query {
             taxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
             if (isMarried()) {
                 marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
-                ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse(ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+                ITaxpayer(ITaxpayer(address(this)).getSpouse())
+                    .redeemTaxAllowanceOfSpouse(ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
             }
         }
     }
@@ -216,19 +217,19 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         joinedLottery = lot;
     }
 
-    function revealLottery(uint256 r) public {
+    function revealLottery() public {
         Lottery l = Lottery(joinedLottery);
-        l.reveal(r);
+        l.reveal(rev);
         rev = 0;
         joinedLottery = address(0);
     }
 
     function winLottery() external {
-      require(msg.sender == joinedLottery);
-      taxAllowance += 2000;
-      if (isMarried()) {
-        marriage.maxAllowance += 2000; // (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
-        ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse(2000);
-      }
+        require(msg.sender == joinedLottery);
+        taxAllowance += 2000;
+        if (isMarried()) {
+            marriage.maxAllowance += 2000; // (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+            ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse(2000);
+        }
     }
 }
