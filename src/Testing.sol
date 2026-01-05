@@ -8,6 +8,7 @@ contract EchidnaTesting {
     Taxpayer[] taxpayers;
     mapping(address => uint256) wins;
     Lottery lottery;
+    uint256 total_ends;
 
     constructor() {
         addTaxpayer();
@@ -34,6 +35,7 @@ contract EchidnaTesting {
       require(address(lottery) != address(0));
       address winner = lottery.endLottery();
       wins[winner] += 1;
+      total_ends += 1;
     }
 
     function check_spouse(uint256 index) internal view returns (bool) {
@@ -105,6 +107,8 @@ contract EchidnaTesting {
     function echidna_check_lottery() public view returns (bool) {
       (address minAddress, uint256 minValue) = getMinWins();
       (address maxAddress, uint256 maxValue) = getMaxWins();
-      return (maxValue - minValue) < 10;
+      if (wins[address(0)] > 0) return false;
+      if (total_ends > 0 && maxValue == 0) return false;
+      return (maxValue - minValue) < 1;
     }
 }
