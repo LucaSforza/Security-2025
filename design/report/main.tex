@@ -1,0 +1,142 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Report of the project of Security and Software Application\\
+}
+
+\author{\IEEEauthorblockN{Luca Sforza}
+\IEEEauthorblockA{\textit{Sapienza} \\
+sforza.2050030@studenti.uniroma1.it}
+}
+
+\maketitle
+
+\begin{abstract}
+Questo report descrive il lavoro svolto per il progetto d'esame del corso di Security and Software Application, Sapienza uniroma1.
+
+Il lavoro introduce la correzione degli smart contract dati insieme alla traccia del progetto.
+
+E' stato utilizzato un approccio Agile, ogni parte del progetto è stata suddivisa in un iterazione della metodologia Agile.
+\end{abstract}
+
+\section{Introduction}
+
+L'obiettivo di questo progetto è analizzare e correggere gli smart contract forniti nella traccia dell'esame del corso Security and Software Application della Sapienza.
+Il lavoro si concentra sull'individuazione delle vulnerabilità presenti nel codice,
+
+L'obiettivo di questo progetto è analizzare e correggere gli smart contract forniti nella traccia dell'esame del corso Security and Software Application della Sapienza. 
+Il lavoro si concentra sull'individuazione delle vulnerabilità presenti nel codice tramite da definizione delle invarianti descritte nelle specifiche del progetto.
+
+La parte di Analisi è stata fatta usando un approccio Model Driven basato su UML (Unified Model Language) particolarmente adatto per la modellazione 
+di sistemi Solidity. % TODO: reference
+
+\section{Pulizia del codice iniziale}
+
+Il codice che è stato fornito era in un pessimo stato.
+
+La visibilità degli attributi è quella di default (TODO metti cosè)
+e il codice è mal indentando non seguendo nessuno standard
+di formattazione.
+
+Per visualizzare tutti questi problemi è possibile utilizzare di linter.
+
+\subsection{Ambienti di sviluppo Solidity}
+
+Per questo progetto è stato utilizzato l'ambiente di sviluppo Solidity
+foundry che fornisce 3 tool principali per lo sviluppo.
+
+\begin{itemize}
+    \item forge % TODO: copiare dal report di Blockchain
+    \item anvil
+    \item cast
+\end{itemize}
+
+\subsection{Problemi logici}
+
+Oltre a questi problemi di gestione del codide nel codice fornito
+esistono vari problemi logici.
+
+Sono stati trovati tramite un approccio Model Driven.
+
+Usando UML (Unified Model Language) è possibile in un modo molto natuare
+a convertirlo in codice Solidity. Nella letteratura si propongono Meta-Modelli. % TODO: rubare dalla relazione di Blockchain
+
+% TODO: inserire UML
+
+Il diagramma delle classi UML mostrato in figura % TODO: inserisci figura
+definisce i vincoli come invarianti del sistema, che devono essere sempre
+mantenuti veri durante l'esecuzione del codice Solidity.
+
+Inanzitutto l'età di un contribuente è salvata come un intero che deve essere
+incrementato ogni anno.
+
+Un approccio migliore è quello di salvarsi il timestamp del blocco in cui
+è salvata eseguita la transazione.
+
+Ogni metodo che definiamo in un contratto Solidity vengono chiamate come transazioni
+verso il contratto stesso. In Solidity abbiamo accetto a tutte le informazioni di questa transazione
+(address del chiamante, ether inviati, timestamp del blocco, ecc...) tramite 
+un costrutto del linguaggio stesso, la keyword: msg % TODO: colorare
+
+Quindi l'età adesso è calcolabile, infatti diventa un metodo del contratto % TODO: controllare che nel codice originale non sia un metodo
+
+
+Si possono usare approcci di verifica formale del Software per dimostrare
+matematicalmente la corretteza del codice formito.
+
+Però per questo progetto è stato utilizzato un altro approccio, il fuzzy testing.
+
+Molti dei vincoli imposti dall'UML possono essere vincolati nel codice direttamente
+grazie alla sintassi del linguaggio (le associazioni, le classi, le interfaccie, ecc...).
+
+Invece altri vincoli (specialmente i vincoli esterni definiti) % TODO: definire in latex i vincoli e riferiscene
+devono usere definiti come metodi che analizzano lo stato del contratto
+per verificare che i vincoli siano veri. % TODO: dire meglio
+
+
+\section{Primo esercizio}
+
+Nel primo esercizio viene richiesto di verificare il vincolo degli sposi.
+
+Più formalmente si deve verificare che la formula in logica del primo ordine:
+
+\begin{equation}
+    \forall a \text{ Taxpayer}(a) \land  \forall b  \text{ spouse}(a,b) \implies
+    spouse(b,a)
+\end{equation}
+
+Quindi per ogni Taxpayer $a$, il suo sposo deve
+essere sposato al taxpayer $a$.
+
+Questo vincolo non può essere modellato attraverso la
+sintassi del linguaggio Solidity, come invece è possibile
+con le invarianti definite dalla formula $\phi$ generata
+dal diagramma UML delle classi.
+
+Quindi va verificato che durante l'esecuzione dello smart contract
+questo vincolo venga mantenuto in ogni possibile stato.
+
+Sfortunatamente questo problema è indecidibile % TODO: controlla verità
+,però possiamo optare al fuzzy testing.
+
+Il vincolo può essere facilmente scritto in Solidity nel seguente modo:
+
+% TODO: aggiungi codice solidity
+
+\section{Esercizio 2}
+
+\begin{equation}
+    \forall a,b
+\end{equation}
+
+\end{document}
