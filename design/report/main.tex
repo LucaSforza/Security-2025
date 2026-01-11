@@ -111,6 +111,7 @@ Nel primo esercizio viene richiesto di verificare il vincolo degli sposi.
 Più formalmente si deve verificare che la formula in logica del primo ordine:
 
 \begin{equation}
+\label{V_spouse}
     \forall a \text{ Taxpayer}(a) \land  \forall b  \text{ spouse}(a,b) \implies
     spouse(b,a)
 \end{equation}
@@ -123,13 +124,19 @@ sintassi del linguaggio Solidity, come invece è possibile
 con le invarianti definite dalla formula $\phi$ generata
 dal diagramma UML delle classi.
 
-Quindi va verificato che durante l'esecuzione dello smart contract
-questo vincolo venga mantenuto in ogni possibile stato.
+Per i vari metodi dei contratti quando modificano lo stato interno del contratto
+devono mantenere l'invariante \ref{V_spouse} vero.
 
-Sfortunatamente questo problema è indecidibile % TODO: controlla verità
-,però possiamo optare al fuzzy testing.
+Se per esempio un Taxpayer ne sposa un altro allora entrambi devono
+essere sposati l'uno con l'altro dentro una singola esecuzione del metodo `marry`.
 
-Il vincolo può essere facilmente scritto in Solidity nel seguente modo:
+Il Taxpayer quindi deve eseguire anche il metodo `marry` dello sposo, questo genera una
+ricorsione.
+
+Gestendola aggiungendo un caso base alla ricorsione è una possibile soluzione al problema.
+
+Poi con echidna è possibile verificare che il vincolo è soddisfatto, creando il giusto metodo di verifica 
+che modella l'invariante \ref{V_spouse}.
 
 % TODO: aggiungi codice solidity
 
@@ -138,5 +145,6 @@ Il vincolo può essere facilmente scritto in Solidity nel seguente modo:
 \begin{equation}
     \forall a,b
 \end{equation}
+
 
 \end{document}
