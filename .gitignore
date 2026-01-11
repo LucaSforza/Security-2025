@@ -16,3 +16,8 @@ docs/
 crytic-export/
 
 corpus/
+
+*.aux
+*.log
+*.pdf
+
