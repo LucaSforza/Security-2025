@@ -142,6 +142,25 @@ per controllare se l'address in input è uno smart contract.
 
 \subsection{Analisi}
 
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter1.png}}
+\caption{
+  In figura è raffigurato la modellazione UML del sistema.
+  Esso definisce l'invariante del sistema, la quale può essere per la maggior parte vincolata tramite la sintassi del linguaggio Solidity.
+  In aggiunta del vincoli imposti dal diagramma delle classi, esistono vincoli esterni.
+  I metodi definiti devono mantenere atomicamente l'invariante durante l'iterazione del sistema. Essi modificano lo stato del sistema e
+  non devono portare lo stato in una configurazione invalida. Quindi si devono aggiungere delle pre-condizioni ai metodi per poter essere eseguiti.
+  Infatti bisogna evitare gli reentrency attacks, poichè uno smart contract malevolo potrebbe, durante l'esecuzione di un metodo,
+  riuscire ad evitare delle pre-condizioni e portare il sistema in uno stato invalido.
+  UML descrive il sistema diviso in due parti. La parte per interfacciarsi con le lotterie (che per la prima iterazione della metodologia Agile è stata ignorata per ora)
+  . E una parte per interfacciarsi con Taxpayer.
+  Ogni classe deve implementare ERC-165 e lo smart contract Taxpayer quindi deve avere un metodo per poter fare query.
+  I vincoli esterni descritti del diagramma sono garantiti dall'implementazione del metodo `marry`, dove atomicamente
+  sposa due Taxpayer, invece che banalmente essere un setter.
+}
+\label{uml:agile1}
+\end{figure}
+
 Il primo esercizio richiede l'implementazione del vincolo di reciprocità coniugale ("spouse").
 Formalmente, si deve verificare la seguente formula della logica del primo ordine:
 
@@ -212,13 +231,12 @@ function marry(address newSpouse) public {
     if (!isMarried()) {
         require(newSpouse != address(this));
         require(
-            doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "the spouse must be a taxpayer"
+            doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId)
         );
         if (ITaxpayer(newSpouse).isMarried()) {
-            require(ITaxpayer(newSpouse).getSpouse() == address(this), "you cannot marry a married taxpayer");
+          require(false);
         }
         marriage.spouse = newSpouse;
-        marriage.maxAllowance = Taxpayer(address(this)).getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
         ITaxpayer(newSpouse).marry(address(this));
     }
 }
@@ -237,6 +255,20 @@ Ovviamente quest'invariante deve essere sempre vera anche quando i Taxpayer divo
 a come è stato implementato il metodo `marry`.
 
 \section{Esercizio 2}
+
+\subsection{Analisi}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
+\caption{In figura è mostrata la seconda iterazione della fase di analisi della Metodologia Agile. Tutto ciò che era vero 
+  per il diagramma delle classi in figura \ref{uml:agile1} è vero anche per questo diagramma. È stata, però, aggiunta l'informazione
+  della taxAllowance comune del matrimonio. Essa è stata registrata durante il matrimonio e quindi quando ci si scambia la propria taxAllowance
+  non bisogna sforare la taxAllowance comune.
+  Uno sposo dovrebbe fare attenzione a quale address si sposa, poichè quell'address deve essere un effettiva instanza di Taxpayer.
+  Ci sarebbe una reentrancy se questo non fosse vero (e.g. lo sposo mente nell'interfaccia ERC-165).
+  }
+\label{uml:agile2}
+\end{figure}
 
 Concluso l'esercizio 1 si è anche conclusa la prima iterazione della metodologia Agile, quindi è stato modificato l'UML
 per modellare le specifiche dell'esercizio 2. % TODO: aggiungere UML
@@ -261,6 +293,13 @@ In questo modo è stato possibile verificare che il vincolo fosse rispettato.
 
 \section{Esercizio 3}
 
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
+\caption{UML Class Diagram of a Token.}
+\label{uml:agile3}
+\end{figure}
+
+
 Con la fine del testing di echidna è finita anche la seconda iterazione del ciclo Agile.
 
 Per la terza parte quindi si riparte dalla fase Model Driven di questo progetto.
@@ -279,6 +318,17 @@ Quindi possiamo vedere il funzionamento con un automa stati finiti. % TODO: imma
 Non serve aggiungere invarianti se non aggiungere le precodinzioni necessarie 
 per poter chiamare il metodo `redeemTaxAllowance`.
 
+\section{Esercizio 4}
 
+\subsection{Analisi}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter4.png}}
+\caption{UML Class Diagram of a Token.}
+\label{uml:agile4}
+\end{figure}
+
+
+\subsection{Progettazione}
 
 \end{document}

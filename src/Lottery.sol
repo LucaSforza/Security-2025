@@ -59,7 +59,7 @@ contract Lottery is ILottery, ERC165Query {
 
     //A taxpayer send his own commitment.
     function commit(bytes32 y) public {
-        require(block.timestamp >= startTime);
+        // require(block.timestamp >= startTime);
         require(
             doesContractImplementInterface(msg.sender, type(ILotteryReceiver).interfaceId),
             "the contract doen't implement ILotteryReceiver interface"
@@ -69,7 +69,7 @@ contract Lottery is ILottery, ERC165Query {
 
     //A valid taxpayer who sent his own commitment, sends the revealing value.
     function reveal(uint256 rev) public {
-        require(block.timestamp >= revealTime);
+        // require(block.timestamp >= revealTime);
         require(keccak256(abi.encode(rev)) == commits[msg.sender]);
         revealed.push(msg.sender);
         reveals[msg.sender] = uint256(rev);
@@ -79,6 +79,7 @@ contract Lottery is ILottery, ERC165Query {
     // returns the address of the winner
     function endLottery() public returns (address) {
         // require(block.timestamp >= endTime);
+        require(revealed.length > 0);
         uint256 total = 0;
         for (uint256 i = 0; i < revealed.length; i++) {
             total += reveals[revealed[i]];

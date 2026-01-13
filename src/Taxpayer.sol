@@ -9,6 +9,8 @@ import {ERC165Query} from "./ERC165Query.sol";
 
 import "./BokkyPooBahsDateTimeLibrary.sol";
 
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 using BokkyPooBahsDateTimeLibrary for uint256;
 
 interface ILotteryReceiver {
@@ -19,6 +21,8 @@ interface ILotteryReceiver {
 
 interface ITaxpayer is ILotteryReceiver, IERC165 {
     function marry(address newSpouse) external;
+    function acceptMarriage(address newSpouse) external;
+    function acceptDivorce(address oldSpouse) external;
     function divorce() external;
     function isMarried() external view returns (bool);
     function getSpouse() external view returns (address);
@@ -31,7 +35,7 @@ interface ITaxpayer is ILotteryReceiver, IERC165 {
     function redeemTaxAllowanceOfSpouse(uint256 value) external;
 }
 
-contract Taxpayer is ITaxpayer, ERC165Query {
+contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
     // uint256 age; This is wrong! a taxpayer should increment his age every birthday manually
     // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
 
@@ -136,29 +140,40 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     }
 
     //We require newSpouse != address(0);
-    function marry(address newSpouse) public {
+    function marry(address newSpouse) public nonReentrant {
         require(newSpouse != address(0));
-        if (!isMarried()) {
-            require(newSpouse != address(this));
-            require(
-                doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "the spouse must be a taxpayer"
-            );
-            if (ITaxpayer(newSpouse).isMarried()) {
-                require(ITaxpayer(newSpouse).getSpouse() == address(this), "you cannot marry a married taxpayer");
-            }
-            marriage.spouse = newSpouse;
-            marriage.maxAllowance = Taxpayer(address(this)).getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
-            ITaxpayer(newSpouse).marry(address(this));
-        }
+        require(!isMarried(), "Already married");
+        require(newSpouse != address(this), "Cannot marry self");
+
+        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
+
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+
+        ITaxpayer(newSpouse).acceptMarriage(address(this));
     }
 
-    function divorce() public {
+    function acceptMarriage(address newSpouse) external nonReentrant {
+        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
+        require(msg.sender == newSpouse, "Caller must be the spouse");
+        require(!isMarried(), "Already married");
+
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+    }
+
+    function divorce() public nonReentrant {
         // taxAllowance = DEFAULT_ALLOWANCE;
-        if (isMarried()) {
-            address oldSpouse = marriage.spouse;
-            marriage.spouse = address(0); // non serve mettere maxTaxAllowance a zero. Più gas efficient
-            ITaxpayer(oldSpouse).divorce();
-        }
+        require(isMarried(), "must have a spouse");
+        address oldSpouse = marriage.spouse;
+        marriage.spouse = address(0); // non serve mettere maxTaxAllowance a zero. Più gas efficient
+        ITaxpayer(oldSpouse).acceptDivorce(address(this));
+    }
+
+    function acceptDivorce(address oldSpouse) public nonReentrant {
+        require(oldSpouse == msg.sender);
+        require(doesContractImplementInterface(oldSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
+        marriage.spouse = address(0);
     }
 
     /* Transfer part of tax allowance to own spouse */
