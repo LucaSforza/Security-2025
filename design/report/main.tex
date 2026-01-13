@@ -128,6 +128,16 @@ Pertanto, l'età non viene più salvata come stato mutabile, ma calcolata dinami
 Per la verifica della correttezza del software, anziché procedere con una verifica formale matematica completa, si è optato per il \textbf{Fuzz Testing}.
 Molti vincoli UML sono stati implementati direttamente tramite la sintassi di Solidity (modificatori di visibilità, tipi di dato, ereditarietà). I vincoli più complessi (invarianti inter-contratto) sono stati invece tradotti in metodi di verifica che analizzano lo stato globale del contratto per confermare il rispetto delle specifiche.
 
+\subsection{ERC-165}
+
+Un altra criticità del codice fornito è il metodo \textbf{isContract}. Esso serve per verificare che un address in input è uno smart contract oppure no, ma questa implementazione non è standard nell'ecosistema Ethereum.
+
+Quindi è stato implementato ERC-165 % TODO: riferimento
+che serve per effettuare delle query allo smart contract per capire quali metodi implementa.
+
+Questo standard però non da garanzie sulla sicurezza, dato che uno smart contract può mentire su quali metodi implementa, ma è un modo miglire e standardizzato
+per controllare se l'address in input è uno smart contract.
+
 \section{Implementazione dei Vincoli: Esercizio 1}
 
 \subsection{Analisi}
