@@ -78,7 +78,7 @@ contract Lottery is ILottery, ERC165Query {
     //Ends the lottery and compute the winner.
     // returns the address of the winner
     function endLottery() public returns (address) {
-        require(block.timestamp >= endTime);
+        // require(block.timestamp >= endTime);
         uint256 total = 0;
         for (uint256 i = 0; i < revealed.length; i++) {
             total += reveals[revealed[i]];
