@@ -9,6 +9,63 @@
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
+\usepackage{listings}
+
+% --- Definizione del linguaggio Solidity ---
+\lstdefinelanguage{Solidity}{
+  morekeywords={
+    pragma, solidity, contract, library, interface, struct, event, modifier, function, returns,
+    if, else, for, while, do, break, continue, return, emit, revert, require, assert,
+    mapping, memory, storage, calldata, public, private, internal, external, view, pure, payable,
+    address, bool, string, bytes, uint, uint8, uint16, uint32, uint64, uint128, uint256,
+    int, int8, int16, int32, int64, int128, int256,
+    new, delete, this, super, msg, block, tx
+  },
+  sensitive=true,
+  morecomment=[l]{//},     % Commenti singola linea
+  morecomment=[s]{/*}{*/}, % Commenti multilinea
+  morestring=[b]",         % Stringhe tra doppi apici
+  morestring=[b]'          % Stringhe tra apici singoli
+}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+% --- Doom One Light Color Definitions ---
+% (Add this to your preamble)
+\definecolor{doomBack}{RGB}{250, 250, 250}     % #fafafa
+\definecolor{doomComment}{RGB}{156, 156, 156}   % #9c9c9c
+\definecolor{doomKeyword}{RGB}{198, 120, 221}   % #c678dd (Purple/Magenta)
+\definecolor{doomString}{RGB}{152, 195, 121}    % #98c379 (Green)
+\definecolor{doomNumber}{RGB}{209, 154, 102}    % #d19a66 (Orange)
+\definecolor{doomDefault}{RGB}{77, 77, 77}      % #4d4d4d (Default Text)
+% Setup section. -----------------------------------|
+
+
+\lstdefinestyle{soliditystyle}{
+  language=Solidity,
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{doomBack}, 
+  commentstyle=\color{doomComment},
+  keywordstyle=\color{doomKeyword},
+  numberstyle=\tiny\color{doomNumber},
+  stringstyle=\color{doomString},
+  basicstyle=\ttfamily\footnotesize\color{doomDefault},
+  breakatwhitespace=false,         
+  breaklines=true,                 
+  captionpos=b,                    
+  keepspaces=true,                 
+  numbers=left,                    
+  numbersep=8pt,                  
+  showspaces=false,                
+  showstringspaces=false,
+  showtabs=false,                  
+  tabsize=2
+}
+
+
+
 \begin{document}
 
 \title{Security and Software Application Project Report}
@@ -73,6 +130,8 @@ Molti vincoli UML sono stati implementati direttamente tramite la sintassi di So
 
 \section{Implementazione dei Vincoli: Esercizio 1}
 
+\subsection{Analisi}
+
 Il primo esercizio richiede l'implementazione del vincolo di reciprocità coniugale ("spouse").
 Formalmente, si deve verificare la seguente formula della logica del primo ordine:
 
@@ -88,12 +147,126 @@ A differenza delle semplici invarianti di stato, questo vincolo implica una dipe
 Se il Taxpayer $A$ esegue il metodo \texttt{marry} verso $B$, il contratto deve forzare anche l'aggiornamento dello stato di $B$ verso $A$ all'interno della stessa transazione. Questo scenario genera una potenziale ricorsione infinita se $B$ tentasse di richiamare \texttt{marry} su $A$.
 La soluzione implementata prevede l'introduzione di un caso base nella logica di ricorsione per terminare l'esecuzione una volta stabilita la relazione bidirezionale.
 
-La correttezza di questa implementazione è stata validata utilizzando \textbf{Echidna} per il fuzzing, creando una proprietà (property) specifica che modella l'invariante \ref{V_spouse} e tenta di falsificarla con input casuali.
+La correttezza di questa implementazione è stata validata utilizzando \textbf{Echidna} per il fuzzing,
+creando una proprietà (property) specifica che modella l'invariante \ref{V_spouse} e tenta di falsificarla con input casuali.
+
+\subsection{Progettazione}
+
+Per poter verificare che l'invariante sia rispettata esistono due modi possibili di farlo in echidna.
+
+Definire le invarianti direttamente nello smart contract di interesse (\textbf{Taxpayer.sol}), questo funziona finchè l'invariante
+deve essere verificare localmente in un instance di Taxpayer.
+Però l'invariante \ref{V_spouse} riguarda più istance di Taxpayer.
+
+\textbf{Echidna} di default istanzia il contratto solo una volta e poi fa fuzzy testing sul contratto di riferimento, esso
+non proverà ad istanziare il contratto più volte per verificare che l'invariante rimanga vero. Il massimo che farebbe \textbf{Echidna}
+è quello di sposare se stesso.
+
+Quindi va trovata una soluzione differente.
+
+\textbf{Echidna} ha la possibilià di definire le sui configurazioni interne dentro un file \text{yaml} % TODO: verificare che  si chiamano cosi questi file
+, un flag che può essere attivato è \textbf{allContracts} che se definito \textbf{true} allora \textbf{Echidna} farà fuzzy tesing non solo
+sul contratto di riferimento, ma anche su tutti i contratti che il contratto di riferimento ha istanziato. % TODO: aggiungere reference alla documentazione
+
+Quindi un altra soluzione possibile è quella di scrivere un nuovo contratto, chiamato \textbf{EchidnaTesting} dove nel suo costruttore
+istanzia vari oggetti della classe \textbf{Taxpayer} e lo aggiunge in un array di Taxpayers.
+
+Le invarianti quindi non vanno aggiunte nel contratto \textbf{Taxpeyer}, ma nel nuovo contratto di test.
+
+Per lo scopo di questo progetto sono stati istanziati 8 Taxpayers di cui 2 over 65.
+
+Così \textbf{Echidna} proverà a sposare diverse compinazioni di questi 8 Taxpayer cercando di rendere falso invariante.
+
+\begin{figure}
+\centering
+\begin{lstlisting}[style=soliditystyle]
+function check_spouse(uint256 index) internal view returns (bool) {
+    Taxpayer t = taxpayers[index];
+    if (t.isMarried()) {
+        return Taxpayer(t.getSpouse()).getSpouse() == address(t);
+    }
+    return true;
+}
+\end{lstlisting}
+  \caption{Progettazione in Solidity dell'invariante \ref{V_spouse}. Questa funzione è internal, quindi non verrà chiamata direttamente
+  da \textbf{Echidna}, ma esiste anche una funzione \textbf{public} che itera per ogni Taxpayer
+  istanziato dal contratto di test per verificare che questa funzione sia vera, fallisce altrimenti.}
+\label{code:V_spouse}
+\end{figure}
+
+\begin{figure}
+\centering
+\begin{lstlisting}[style=soliditystyle]
+function marry(address newSpouse) public {
+    require(newSpouse != address(0));
+    if (!isMarried()) {
+        require(newSpouse != address(this));
+        require(
+            doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "the spouse must be a taxpayer"
+        );
+        if (ITaxpayer(newSpouse).isMarried()) {
+            require(ITaxpayer(newSpouse).getSpouse() == address(this), "you cannot marry a married taxpayer");
+        }
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = Taxpayer(address(this)).getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+        ITaxpayer(newSpouse).marry(address(this));
+    }
+}
+\end{lstlisting}
+  \caption{Progettazione in Solidity del metodo \textbf{marry}. Come spiegato nell'analisi è una funzione ricorsiva. Per prima cosa si controlla che
+  il nuovo sposo non sia l'address 0 (che sarebbe equivalente del divorzio). Il caso base è quando un Taxpayer non è sposato. Se quando un Taxpayer ne sposa un altro
+  esso è già sposato allora scatta un eccezione.}
+\label{code:marry}
+\end{figure}
+
+Per la progettazione dell'invariante vedere figura \ref{code:V_spouse}.
+
+Invece per la modifica del metodo `marry` vedere \ref{code:marry}.
+
+Ovviamente quest'invariante deve essere sempre vera anche quando i Taxpayer divorziano. Quindi il divorzio anch'esso sarà ricorsivo in un modo simile
+a come è stato implementato il metodo `marry`.
 
 \section{Esercizio 2}
 
+Concluso l'esercizio 1 si è anche conclusa la prima iterazione della metodologia Agile, quindi è stato modificato l'UML
+per modellare le specifiche dell'esercizio 2. % TODO: aggiungere UML
+% TODO: spiegare prima la metodologia agile
+
+Con le nuove specifiche deve essere possibile spostare la tax allowance da uno sposo ad un altro, però vincolando
+che la somma delle due sia uguale a alla somma delle due taxallowance al tempo dl matrimonio.
+
+Questo introduce una necessità a salvarsi questa informazione quando avviene il matrimonio.
+
+Poichè questo vincolo non può essere espresso attraverso la sintassi di UML (e quindi di Solidity),
+nel metodo `transferAllowance` sono state aggiunte le precodinzioni affinchè il metodo rispetti il vincolo.
+
+Il vincolo può essere espresso attraverso la logica del primo ordine nel seguente modo.
+
 \begin{equation}
-    \forall a,b ...
+  \forall a,b \in Taxpayer : married(a,b)
+  \implies a.taxAllowanceo + b.taxAllowance = \text{Tax allowance all'inizio del Matrimonio} 
 \end{equation}
+
+In questo modo è stato possibile verificare che il vincolo fosse rispettato.
+
+\section{Esercizio 3}
+
+Con la fine del testing di echidna è finita anche la seconda iterazione del ciclo Agile.
+
+Per la terza parte quindi si riparte dalla fase Model Driven di questo progetto.
+
+Dato che adesso l'età è calcolabile non possiamo automaticamente aumentare la taxAllowance di un individuo
+quando compie 65 anni. In più se il Taxpayer è sposato bisogna modificare la taxAllowance globale del matrimonio.
+
+Quindi è stato aggiunto un metodo chiamato `redeemTaxAllowance` % TODO: controllare
+
+Un taxpayer che ha compiuto 65 anni è di suo interesse chiamare questo metodo appena compie 65 anni per poter
+ridurre la sua taxAllowance. Questo richiede una piccola fee da pagare alla blockchain quando si compiono 65 anni, ma tanto è da fare
+una sola volta.
+
+Quindi possiamo vedere il funzionamento con un automa stati finiti. % TODO: immagine
+
+Non serve aggiungere invarianti se non aggiungere le precodinzioni necessarie 
+per poter chiamare il metodo `redeemTaxAllowance`.
 
 \end{document}

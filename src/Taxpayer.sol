@@ -137,6 +137,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
 
     //We require newSpouse != address(0);
     function marry(address newSpouse) public {
+        require(newSpouse != address(0));
         if (!isMarried()) {
             require(newSpouse != address(this));
             require(
@@ -163,6 +164,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     /* Transfer part of tax allowance to own spouse */
     function transferAllowance(uint256 change) public {
         require(isMarried(), "you must be married to transfer allowance");
+        require(taxAllowance >= change, "cannot change more than the taxAllowance holded");
         taxAllowance = taxAllowance - change;
         ITaxpayer sp = ITaxpayer(address(marriage.spouse));
         sp.setTaxAllowance(sp.getTaxAllowance() + change);
@@ -185,6 +187,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         return age;
     }
 
+    // TODO: Dire nella relazione che queste pre-condizioni devono essere vero
     function setTaxAllowance(uint256 ta) public {
         // require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
         // This pre-condition is wrong. Use ERC-165 instead
@@ -193,7 +196,6 @@ contract Taxpayer is ITaxpayer, ERC165Query {
                 || doesContractImplementInterface(address(msg.sender), type(ILottery).interfaceId),
             "Not ITaxpayer or Lottery"
         );
-        // TODO: add ERC-165 to Lottery
         taxAllowance = ta;
     }
 
