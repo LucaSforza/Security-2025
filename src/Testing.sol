@@ -6,9 +6,9 @@ import {Lottery} from "../src/Lottery.sol";
 
 contract EchidnaTesting {
     Taxpayer[] taxpayers;
-    mapping(address => uint256) wins;
-    address lottery;
-    uint256 total_ends;
+    mapping(address => uint256) wins; // deprecate
+    address lottery; // deprecate
+    uint256 total_ends; // deprecate
 
     constructor() {
         addTaxpayer();
@@ -58,6 +58,54 @@ contract EchidnaTesting {
     function echidna_check_tax_allowance() public view returns (bool) {
         for (uint256 index = 0; index < taxpayers.length; index++) {
             if (!check_tax_allowance(index)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function check_reedem_tax_allowance(uint256 index) public view returns (bool) {
+        uint256 ALLOWANCE_OAP = 7000;
+        uint256 DEFAULT_ALLOWANCE = 5000;
+
+        Taxpayer t = taxpayers[index];
+        if (t.isReedemed()) {
+            if (t.isMarried()) {
+                Taxpayer spouse = Taxpayer(t.getSpouse());
+                uint256 spouseContribute = 0;
+                if (spouse.isReedemed()) {
+                    spouseContribute = ALLOWANCE_OAP;
+                } else {
+                    spouseContribute = DEFAULT_ALLOWANCE;
+                }
+                uint256 maxAllowance = t.getTaxAllowance() + spouse.getTaxAllowance();
+                return maxAllowance == t.getMaxTaxAllowance() && maxAllowance == spouse.getMaxTaxAllowance()
+                    && maxAllowance == (ALLOWANCE_OAP + spouseContribute);
+            } else {
+                return t.getTaxAllowance() == ALLOWANCE_OAP;
+            }
+        } else {
+            if (t.isMarried()) {
+                Taxpayer spouse = Taxpayer(t.getSpouse());
+                uint256 spouseContribute = 0;
+                if (spouse.isReedemed()) {
+                    spouseContribute = ALLOWANCE_OAP;
+                } else {
+                    spouseContribute = DEFAULT_ALLOWANCE;
+                }
+                uint256 maxAllowance = t.getTaxAllowance() + spouse.getTaxAllowance();
+                return maxAllowance == t.getMaxTaxAllowance() && maxAllowance == spouse.getMaxTaxAllowance()
+                    && maxAllowance == (DEFAULT_ALLOWANCE + spouseContribute);
+            } else {
+                return t.getTaxAllowance() == DEFAULT_ALLOWANCE;
+            }
+        }
+        return true;
+    }
+
+    function echidna_reedem_taxAllowance() public view returns (bool) {
+        for (uint256 index = 0; index < taxpayers.length; index++) {
+            if (!check_reedem_tax_allowance(index)) {
                 return false;
             }
         }

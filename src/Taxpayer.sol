@@ -11,6 +11,8 @@ import "./BokkyPooBahsDateTimeLibrary.sol";
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+import "@openzeppelin/contracts/utils/Strings.sol";
+
 using BokkyPooBahsDateTimeLibrary for uint256;
 
 interface ILotteryReceiver {
@@ -22,7 +24,7 @@ interface ILotteryReceiver {
 interface ITaxpayer is ILotteryReceiver, IERC165 {
     function marry(address newSpouse) external;
     function acceptMarriage(address newSpouse) external;
-    function acceptDivorce(address oldSpouse) external;
+    function acceptDivorce() external;
     function divorce() external;
     function isMarried() external view returns (bool);
     function getSpouse() external view returns (address);
@@ -33,6 +35,7 @@ interface ITaxpayer is ILotteryReceiver, IERC165 {
     function getMaxTaxAllowance() external view returns (uint256 maxAllowance);
     function redeemTaxAllowance() external;
     function redeemTaxAllowanceOfSpouse(uint256 value) external;
+    function isReedemed() external view returns (bool);
 }
 
 contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
@@ -73,6 +76,10 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
     }
 
     bool private redeemed;
+
+    function isReedemed() external view returns (bool) {
+        return redeemed;
+    }
 
     function redeemTaxAllowance() external {
         if (!redeemed && ITaxpayer(address(this)).age() >= AGE_THREASHOLD) {
@@ -139,13 +146,31 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
             || interfaceId == type(ILotteryReceiver).interfaceId;
     }
 
+    modifier checkInterfaceTaxpayer(address a) {
+        require(doesContractImplementInterface(a, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
+        _; // Body of the function
+    }
+
+    modifier checkInterfaceLottery(address a) {
+        require(doesContractImplementInterface(a, type(ILottery).interfaceId), "Lottery not Taxpayer");
+        _; // Body of the function
+    }
+
+    event Message(string);
+
+    function _assert(bool condition, string memory message) internal {
+        if (!condition) {
+            emit Message(message);
+            emit AssertionFailed(1);
+        }
+    }
+    event AssertionFailed(uint256);
+
     //We require newSpouse != address(0);
-    function marry(address newSpouse) public nonReentrant {
+    function marry(address newSpouse) public nonReentrant checkInterfaceTaxpayer(newSpouse) {
         require(newSpouse != address(0));
         require(!isMarried(), "Already married");
         require(newSpouse != address(this), "Cannot marry self");
-
-        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
 
         marriage.spouse = newSpouse;
         marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
@@ -153,26 +178,47 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         ITaxpayer(newSpouse).acceptMarriage(address(this));
     }
 
-    function acceptMarriage(address newSpouse) external nonReentrant {
-        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
+    function acceptMarriage(address newSpouse) external nonReentrant checkInterfaceTaxpayer(newSpouse) {
         require(msg.sender == newSpouse, "Caller must be the spouse");
         require(!isMarried(), "Already married");
 
         marriage.spouse = newSpouse;
         marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+        _assert(ITaxpayer(newSpouse).getSpouse() == address(this), "the new spouse is not me");
+        _assert(ITaxpayer(newSpouse).getMaxTaxAllowance() == marriage.maxAllowance, "max Allowance is not consistent");
     }
 
     function divorce() public nonReentrant {
-        // taxAllowance = DEFAULT_ALLOWANCE;
         require(isMarried(), "must have a spouse");
         address oldSpouse = marriage.spouse;
         marriage.spouse = address(0); // non serve mettere maxTaxAllowance a zero. Più gas efficient
-        ITaxpayer(oldSpouse).acceptDivorce(address(this));
+        if (this.isReedemed()) taxAllowance = ALLOWANCE_OAP;
+        else taxAllowance = DEFAULT_ALLOWANCE;
+        ITaxpayer(oldSpouse).acceptDivorce();
+        _assert(ITaxpayer(oldSpouse).getSpouse() == address(0), "the spouse must be zero");
+        _assert(
+            !ITaxpayer(oldSpouse).isReedemed() || ITaxpayer(oldSpouse).getTaxAllowance() == ALLOWANCE_OAP,
+            string.concat(
+                "old spouse is reedemed, but the tax allowance is: ",
+                Strings.toString(ITaxpayer(oldSpouse).getTaxAllowance())
+            )
+        );
+        _assert(
+            ITaxpayer(oldSpouse).isReedemed() || ITaxpayer(oldSpouse).getTaxAllowance() == DEFAULT_ALLOWANCE,
+            string.concat(
+                "old spouse is not reedemed, but the tax allowance is: ",
+                Strings.toString(ITaxpayer(oldSpouse).getTaxAllowance())
+            )
+        );
     }
 
-    function acceptDivorce(address oldSpouse) public nonReentrant {
-        require(oldSpouse == msg.sender);
-        require(doesContractImplementInterface(oldSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
+    function acceptDivorce() public nonReentrant {
+        require(marriage.spouse == msg.sender);
+        if (this.isReedemed()) taxAllowance = ALLOWANCE_OAP;
+        else taxAllowance = DEFAULT_ALLOWANCE;
+        // It is not required to check that the spouse implement ITaxpayer interface, we assumed so beacuse we have checked
+        // it that the spouse implement this interface when we marry them TODO: dire meglio
+        // require(doesContractImplementInterface(oldSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
         marriage.spouse = address(0);
     }
 
@@ -183,6 +229,11 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         taxAllowance = taxAllowance - change;
         ITaxpayer sp = ITaxpayer(address(marriage.spouse));
         sp.setTaxAllowance(sp.getTaxAllowance() + change);
+        _assert(
+            sp.getTaxAllowance() + this.getTaxAllowance() == marriage.maxAllowance,
+            "max allowance is not consistent to sum of tax allowances"
+        );
+        _assert(sp.getMaxTaxAllowance() == marriage.maxAllowance, "max allowance is not consistent in cached value");
     }
 
     function age() public view returns (uint256) {
@@ -203,14 +254,14 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
     }
 
     // TODO: Dire nella relazione che queste pre-condizioni devono essere vero
-    function setTaxAllowance(uint256 ta) public {
+    function setTaxAllowance(uint256 ta)
+        public
+        nonReentrant
+        checkInterfaceTaxpayer(msg.sender)
+        checkInterfaceLottery(msg.sender)
+    {
         // require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
         // This pre-condition is wrong. Use ERC-165 instead
-        require(
-            doesContractImplementInterface(address(msg.sender), type(ITaxpayer).interfaceId)
-                || doesContractImplementInterface(address(msg.sender), type(ILottery).interfaceId),
-            "Not ITaxpayer or Lottery"
-        );
         taxAllowance = ta;
     }
 

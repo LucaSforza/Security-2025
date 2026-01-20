@@ -132,10 +132,11 @@ contract EchidnaTesting {
         // Allow the lottery to run!
         // Only check the distribution statistics after enough data is collected.
         if (total_ends < 5) return true;
+        else return false;
         // Check if the spread between winners is acceptable
         // Note: < 1 implies everyone has the EXACT same number of wins, which is statistically unlikely.
         // You might want a higher threshold like < 5 depending on the number of iterations.
-        return (maxValue - minValue) < 10;
+        return (maxValue - minValue) < 1;
     }
 
     function check_spouse(uint256 index) internal view returns (bool) {

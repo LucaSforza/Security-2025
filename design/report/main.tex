@@ -71,16 +71,16 @@
 \title{Security and Software Application Project Report}
 
 \author{\IEEEauthorblockN{Luca Sforza}
-\IEEEauthorblockA{\textit{Sapienza Università di Roma} \\
-sforza.2050030@studenti.uniroma1.it}
+	\IEEEauthorblockA{\textit{Sapienza Università di Roma} \\
+		sforza.2050030@studenti.uniroma1.it}
 }
 
 \maketitle
 
 \begin{abstract}
-Il presente elaborato illustra il lavoro svolto per il progetto d'esame del corso di Security and Software Application presso Sapienza Università di Roma.
-L'obiettivo principale riguarda l'analisi e la correzione di vulnerabilità in smart contract Solidity forniti nelle specifiche di progetto.
-Per lo sviluppo è stata adottata la metodologia Agile, suddividendo il lavoro in iterazioni incrementali al fine di garantire un controllo costante sulla qualità del codice e sulla sicurezza degli invarianti di sistema.
+	Il presente elaborato illustra il lavoro svolto per il progetto d'esame del corso di Security and Software Application presso Sapienza Università di Roma.
+	L'obiettivo principale riguarda l'analisi e la correzione di vulnerabilità in smart contract Solidity forniti nelle specifiche di progetto.
+	Per lo sviluppo è stata adottata la metodologia Agile, suddividendo il lavoro in iterazioni incrementali al fine di garantire un controllo costante sulla qualità del codice e sulla sicurezza degli invarianti di sistema.
 \end{abstract}
 
 % Nota: In IEEEtran solitamente si usa l'inglese per Abstract e Keywords, 
@@ -95,7 +95,7 @@ La fase di analisi è stata condotta seguendo un approccio \textit{Model Driven}
 
 \section{Refactoring e Pulizia del Codice}
 
-Il codice fornito inizialmente presentava numerose criticità strutturali e stilistiche. 
+Il codice fornito inizialmente presentava numerose criticità strutturali e stilistiche.
 In particolare, la visibilità degli attributi era impostata sul valore di default (spesso non intenzionale) e l'indentazione non seguiva alcuno standard di formattazione riconosciuto.
 
 Per identificare e risolvere sistematicamente queste problematiche, sono stati utilizzati strumenti di analisi statica (linter).
@@ -105,10 +105,12 @@ Per identificare e risolvere sistematicamente queste problematiche, sono stati u
 Per questo progetto è stato utilizzato il framework di sviluppo \textbf{Foundry}, che fornisce una suite di strumenti essenziali per la sicurezza e il testing di smart contract:
 
 \begin{itemize}
-    \item \textbf{Forge}: Utilizzato per compilare, testare e distribuire i contratti.
-    \item \textbf{Anvil}: Un nodo locale Ethereum per il testing rapido.
-    \item \textbf{Cast}: Strumento per interagire con il contratto tramite riga di comando.
+	\item \textbf{Forge}: Utilizzato per compilare, testare e distribuire i contratti.
+	\item \textbf{Anvil}: Un nodo locale Ethereum per il testing rapido.
+	\item \textbf{Cast}: Strumento per interagire con il contratto tramite riga di comando.
 \end{itemize}
+
+Grazie ad esso è possibile formattare il codice solidity e utilizzare un linter per indetificare ulteriori errori.
 
 \subsection{Analisi dei Problemi Logici}
 
@@ -143,30 +145,30 @@ per controllare se l'address in input è uno smart contract.
 \subsection{Analisi}
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter1.png}}
-\caption{
-  In figura è raffigurato la modellazione UML del sistema.
-  Esso definisce l'invariante del sistema, la quale può essere per la maggior parte vincolata tramite la sintassi del linguaggio Solidity.
-  In aggiunta del vincoli imposti dal diagramma delle classi, esistono vincoli esterni.
-  I metodi definiti devono mantenere atomicamente l'invariante durante l'iterazione del sistema. Essi modificano lo stato del sistema e
-  non devono portare lo stato in una configurazione invalida. Quindi si devono aggiungere delle pre-condizioni ai metodi per poter essere eseguiti.
-  Infatti bisogna evitare gli reentrency attacks, poichè uno smart contract malevolo potrebbe, durante l'esecuzione di un metodo,
-  riuscire ad evitare delle pre-condizioni e portare il sistema in uno stato invalido.
-  UML descrive il sistema diviso in due parti. La parte per interfacciarsi con le lotterie (che per la prima iterazione della metodologia Agile è stata ignorata per ora)
-  . E una parte per interfacciarsi con Taxpayer.
-  Ogni classe deve implementare ERC-165 e lo smart contract Taxpayer quindi deve avere un metodo per poter fare query.
-  I vincoli esterni descritti del diagramma sono garantiti dall'implementazione del metodo `marry`, dove atomicamente
-  sposa due Taxpayer, invece che banalmente essere un setter.
-}
-\label{uml:agile1}
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter1.png}}
+	\caption{
+		In figura è raffigurato la modellazione UML del sistema.
+		Esso definisce l'invariante del sistema, la quale può essere per la maggior parte vincolata tramite la sintassi del linguaggio Solidity.
+		In aggiunta del vincoli imposti dal diagramma delle classi, esistono vincoli esterni.
+		I metodi definiti devono mantenere atomicamente l'invariante durante l'iterazione del sistema. Essi modificano lo stato del sistema e
+		non devono portare lo stato in una configurazione invalida. Quindi si devono aggiungere delle pre-condizioni ai metodi per poter essere eseguiti.
+		Infatti bisogna evitare gli reentrency attacks, poichè uno smart contract malevolo potrebbe, durante l'esecuzione di un metodo,
+		riuscire ad evitare delle pre-condizioni e portare il sistema in uno stato invalido.
+		UML descrive il sistema diviso in due parti. La parte per interfacciarsi con le lotterie (che per la prima iterazione della metodologia Agile è stata ignorata per ora)
+		. E una parte per interfacciarsi con Taxpayer.
+		Ogni classe deve implementare ERC-165 e lo smart contract Taxpayer quindi deve avere un metodo per poter fare query.
+		I vincoli esterni descritti del diagramma sono garantiti dall'implementazione del metodo `marry`, dove atomicamente
+		sposa due Taxpayer, invece che banalmente essere un setter.
+	}
+	\label{uml:agile1}
 \end{figure}
 
 Il primo esercizio richiede l'implementazione del vincolo di reciprocità coniugale ("spouse").
 Formalmente, si deve verificare la seguente formula della logica del primo ordine:
 
 \begin{equation}
-\label{V_spouse}
-    \forall a \in \text{Taxpayer}, \forall b \in \text{Person}: \text{spouse}(a,b) \implies \text{spouse}(b,a)
+	\label{V_spouse}
+	\forall a \in \text{Taxpayer}, \forall b \in \text{Taxpayer}: \text{spouse}(a,b) \implies \text{spouse}(b,a)
 \end{equation}
 
 In termini pratici: se un contribuente $a$ è registrato come sposo di $b$, allora $b$ deve necessariamente avere $a$ registrato come proprio sposo.
@@ -207,8 +209,8 @@ Per lo scopo di questo progetto sono stati istanziati 8 Taxpayers di cui 2 over 
 Così \textbf{Echidna} proverà a sposare diverse compinazioni di questi 8 Taxpayer cercando di rendere falso invariante.
 
 \begin{figure}
-\centering
-\begin{lstlisting}[style=soliditystyle]
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
 function check_spouse(uint256 index) internal view returns (bool) {
     Taxpayer t = taxpayers[index];
     if (t.isMarried()) {
@@ -217,34 +219,43 @@ function check_spouse(uint256 index) internal view returns (bool) {
     return true;
 }
 \end{lstlisting}
-  \caption{Progettazione in Solidity dell'invariante \ref{V_spouse}. Questa funzione è internal, quindi non verrà chiamata direttamente
-  da \textbf{Echidna}, ma esiste anche una funzione \textbf{public} che itera per ogni Taxpayer
-  istanziato dal contratto di test per verificare che questa funzione sia vera, fallisce altrimenti.}
-\label{code:V_spouse}
+	\caption{Progettazione in Solidity dell'invariante \ref{V_spouse}. Questa funzione è internal, quindi non verrà chiamata direttamente
+		da \textbf{Echidna}, ma esiste anche una funzione \textbf{public} che itera per ogni Taxpayer
+		istanziato dal contratto di test per verificare che questa funzione sia vera, fallisce altrimenti.}
+	\label{code:V_spouse}
 \end{figure}
 
 \begin{figure}
-\centering
-\begin{lstlisting}[style=soliditystyle]
-function marry(address newSpouse) public {
-    require(newSpouse != address(0));
-    if (!isMarried()) {
-        require(newSpouse != address(this));
-        require(
-            doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId)
-        );
-        if (ITaxpayer(newSpouse).isMarried()) {
-          require(false);
-        }
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function marry(address newSpouse) public nonReentrant {
+        require(newSpouse != address(0));
+        require(!isMarried(), "Already married");
+        require(newSpouse != address(this), "Cannot marry self");
+
+        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
+
         marriage.spouse = newSpouse;
-        ITaxpayer(newSpouse).marry(address(this));
+        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+
+        ITaxpayer(newSpouse).acceptMarriage(address(this));
     }
-}
+
+    function acceptMarriage(address newSpouse) external nonReentrant {
+        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
+        require(msg.sender == newSpouse, "Caller must be the spouse");
+        require(!isMarried(), "Already married");
+
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+    }
 \end{lstlisting}
-  \caption{Progettazione in Solidity del metodo \textbf{marry}. Come spiegato nell'analisi è una funzione ricorsiva. Per prima cosa si controlla che
-  il nuovo sposo non sia l'address 0 (che sarebbe equivalente del divorzio). Il caso base è quando un Taxpayer non è sposato. Se quando un Taxpayer ne sposa un altro
-  esso è già sposato allora scatta un eccezione.}
-\label{code:marry}
+	\caption{Progettazione in Solidity del metodo \textbf{marry}. Esso chiama la funzione acceptMarriage sull'address dello sposo.
+		Così atomicamente il metodo \textbf{marry} sposa due taxpayer mantenendo le invarianti del modello UML vere prima e dopo l'esecuzione.
+		Chiaramente se lo sposo non implementa l'interfaccia ITaxpayer, allora sarebbe possibile un reentrancy attack. Possiamo evitarlo con la libreria di utilities OpenZeepeling % TODO: è sbagliato
+		che offre il costrutto nonReerancy.
+	}
+	\label{code:marry}
 \end{figure}
 
 Per la progettazione dell'invariante vedere figura \ref{code:V_spouse}.
@@ -259,15 +270,15 @@ a come è stato implementato il metodo `marry`.
 \subsection{Analisi}
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
-\caption{In figura è mostrata la seconda iterazione della fase di analisi della Metodologia Agile. Tutto ciò che era vero 
-  per il diagramma delle classi in figura \ref{uml:agile1} è vero anche per questo diagramma. È stata, però, aggiunta l'informazione
-  della taxAllowance comune del matrimonio. Essa è stata registrata durante il matrimonio e quindi quando ci si scambia la propria taxAllowance
-  non bisogna sforare la taxAllowance comune.
-  Uno sposo dovrebbe fare attenzione a quale address si sposa, poichè quell'address deve essere un effettiva instanza di Taxpayer.
-  Ci sarebbe una reentrancy se questo non fosse vero (e.g. lo sposo mente nell'interfaccia ERC-165).
-  }
-\label{uml:agile2}
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
+	\caption{In figura è mostrata la seconda iterazione della fase di analisi della Metodologia Agile. Tutto ciò che era vero
+		per il diagramma delle classi in figura \ref{uml:agile1} è vero anche per questo diagramma. È stata, però, aggiunta l'informazione
+		della taxAllowance comune del matrimonio. Essa è stata registrata durante il matrimonio e quindi quando ci si scambia la propria taxAllowance
+		non bisogna sforare la taxAllowance comune.
+		Uno sposo dovrebbe fare attenzione a quale address si sposa, poichè quell'address deve essere un effettiva instanza di Taxpayer.
+		Ci sarebbe una reentrancy se questo non fosse vero (e.g. lo sposo mente nell'interfaccia ERC-165).
+	}
+	\label{uml:agile2}
 \end{figure}
 
 Concluso l'esercizio 1 si è anche conclusa la prima iterazione della metodologia Agile, quindi è stato modificato l'UML
@@ -285,8 +296,8 @@ nel metodo `transferAllowance` sono state aggiunte le precodinzioni affinchè il
 Il vincolo può essere espresso attraverso la logica del primo ordine nel seguente modo.
 
 \begin{equation}
-  \forall a,b \in Taxpayer : married(a,b)
-  \implies a.taxAllowanceo + b.taxAllowance = \text{Tax allowance all'inizio del Matrimonio} 
+	\forall a,b \in Taxpayer : married(a,b)
+	\implies a.taxAllowanceo + b.taxAllowance = \text{Tax allowance all'inizio del Matrimonio}
 \end{equation}
 
 In questo modo è stato possibile verificare che il vincolo fosse rispettato.
@@ -294,9 +305,9 @@ In questo modo è stato possibile verificare che il vincolo fosse rispettato.
 \section{Esercizio 3}
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
-\caption{UML Class Diagram of a Token.}
-\label{uml:agile3}
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
+	\caption{UML Class Diagram of a Token.}
+	\label{uml:agile3}
 \end{figure}
 
 
@@ -315,7 +326,7 @@ una sola volta.
 
 Quindi possiamo vedere il funzionamento con un automa stati finiti. % TODO: immagine
 
-Non serve aggiungere invarianti se non aggiungere le precodinzioni necessarie 
+Non serve aggiungere invarianti se non aggiungere le precodinzioni necessarie
 per poter chiamare il metodo `redeemTaxAllowance`.
 
 \section{Esercizio 4}
@@ -323,9 +334,9 @@ per poter chiamare il metodo `redeemTaxAllowance`.
 \subsection{Analisi}
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter4.png}}
-\caption{UML Class Diagram of a Token.}
-\label{uml:agile4}
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter4.png}}
+	\caption{UML Class Diagram of a Token.}
+	\label{uml:agile4}
 \end{figure}
 
 
