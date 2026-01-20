@@ -6,9 +6,6 @@ import {Lottery} from "../src/Lottery.sol";
 
 contract EchidnaTesting {
     Taxpayer[] taxpayers;
-    mapping(address => uint256) wins; // deprecate
-    address lottery; // deprecate
-    uint256 total_ends; // deprecate
 
     constructor() {
         addTaxpayer();
