@@ -81,15 +81,14 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         return redeemed;
     }
 
-    function redeemTaxAllowance() external {
-        if (!redeemed && ITaxpayer(address(this)).age() >= AGE_THREASHOLD) {
-            redeemed = true;
-            taxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
-            if (isMarried()) {
-                marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
-                ITaxpayer(ITaxpayer(address(this)).getSpouse())
-                    .redeemTaxAllowanceOfSpouse(ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
-            }
+    function redeemTaxAllowance() external nonReentrant {
+        require(!redeemed && ITaxpayer(address(this)).age() >= AGE_THREASHOLD);
+        redeemed = true;
+        taxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+        if (isMarried()) {
+            marriage.maxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
+            ITaxpayer(ITaxpayer(address(this)).getSpouse())
+                .redeemTaxAllowanceOfSpouse(ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
         }
     }
 
@@ -119,7 +118,7 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
 
     //Parents are taxpayers
     constructor(address p1, address p2, uint8 day, uint8 month, uint16 year) {
-        // changed new constructor argument and pre-condition to check if the birthday is consistent
+        // changed new constructor argument and pre-cond/ition to check if the birthday is consistent
         // changed pre-condition about the interface of parents
         require(month > 0 && month <= 12);
         require(day > 0 && day <= 31);
@@ -289,12 +288,12 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         Lottery l = Lottery(joinedLottery);
         l.reveal(rev);
         rev = 0;
-        joinedLottery = address(0);
     }
 
     function winLottery() external {
         require(msg.sender == joinedLottery);
         taxAllowance += 2000;
+        joinedLottery = address(0);
         if (isMarried()) {
             marriage.maxAllowance += 2000; // (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
             ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse(2000);
