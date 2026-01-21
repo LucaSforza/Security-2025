@@ -15,8 +15,11 @@ using BokkyPooBahsDateTimeLibrary for uint256;
 
 interface ILottery is IERC165 {
     function startLottery() external;
+
     function commit(bytes32 y) external;
+
     function reveal(uint256 rev) external;
+
     function endLottery() external returns (address);
 }
 
@@ -35,11 +38,14 @@ contract Lottery is ILottery, ERC165Query {
             emit AssertionFailed(1);
         }
     }
+
     event AssertionFailed(uint256);
 
     mapping(bytes4 => bool) supportedInterfaces;
 
-    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) external view virtual override returns (bool) {
         return supportedInterfaces[interfaceId];
     }
 
@@ -81,7 +87,10 @@ contract Lottery is ILottery, ERC165Query {
         // require(block.timestamp >= startTime);
         require(State.Started == state);
         require(
-            doesContractImplementInterface(msg.sender, type(ILotteryReceiver).interfaceId),
+            doesContractImplementInterface(
+                msg.sender,
+                type(ILotteryReceiver).interfaceId
+            ),
             "the contract doen't implement ILotteryReceiver interface"
         );
         commits[iteration][msg.sender] = y;
@@ -110,9 +119,13 @@ contract Lottery is ILottery, ERC165Query {
         require(revealed[iteration].length > 0, "No one was revealed.");
         uint256 total = 0;
         for (uint256 i = 0; i < revealed[iteration].length; i++) {
-            total += reveals[iteration][revealed[iteration][i]] % revealed[iteration].length;
+            total +=
+                reveals[iteration][revealed[iteration][i]] %
+                revealed[iteration].length;
         }
-        address winner = revealed[iteration][total % revealed[iteration].length];
+        address winner = revealed[iteration][
+            total % revealed[iteration].length
+        ];
         state = State.NotStarted;
         iteration += 1;
         ILotteryReceiver(winner).winLottery();

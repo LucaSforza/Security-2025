@@ -171,6 +171,8 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         require(!isMarried(), "Already married");
         require(newSpouse != address(this), "Cannot marry self");
 
+        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "must marry a Taxpayer");
+
         marriage.spouse = newSpouse;
         marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
 
@@ -180,6 +182,7 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
     function acceptMarriage(address newSpouse) external nonReentrant checkInterfaceTaxpayer(newSpouse) {
         require(msg.sender == newSpouse, "Caller must be the spouse");
         require(!isMarried(), "Already married");
+        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "must marry a Taxpayer");
 
         marriage.spouse = newSpouse;
         marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
