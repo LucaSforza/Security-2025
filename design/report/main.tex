@@ -122,13 +122,18 @@ L'utilizzo di diagrammi delle classi UML permette una traduzione naturale verso 
 
 Il diagramma delle classi UML definisce i vincoli del sistema sotto forma di invarianti, le quali devono rimanere vere durante l'intera esecuzione delle transazioni.
 
-Un esempio critico riscontrato riguarda la gestione dell'età del contribuente. Inizialmente, questa era memorizzata come un numero intero da incrementare manualmente ogni anno. Tale approccio è prono a errori e disallineamenti.
-La soluzione adottata prevede invece l'utilizzo del timestamp del blocco in cui viene eseguita la transazione. In Solidity, è possibile accedere ai metadati della transazione (come il mittente \texttt{msg.sender}, il valore inviato \texttt{msg.value}, e il timestamp \texttt{block.timestamp}) tramite le variabili globali del linguaggio.
+Un esempio critico riscontrato riguarda la gestione dell'età del contribuente. Inizialmente, questa era memorizzata come un numero intero da incrementare manualmente ogni anno.
+Tale approccio è prono a errori e disallineamenti e non è gas efficient.
 
-Pertanto, l'età non viene più salvata come stato mutabile, ma calcolata dinamicamente come metodo del contratto, garantendo coerenza temporale.
+L'età invece sarebbe calcolabile se ci si salvassimo la data di nascita. Qua nasce un problema perchè i blocchi della blockchain di Ethereum usano il timestamp
+UNIX e quindi lo Zero è il 1970, quindi non è possibile rappresentare Taxpayer over 65.
 
-Per la verifica della correttezza del software, anziché procedere con una verifica formale matematica completa, si è optato per il \textbf{Fuzz Testing}.
-Molti vincoli UML sono stati implementati direttamente tramite la sintassi di Solidity (modificatori di visibilità, tipi di dato, ereditarietà). I vincoli più complessi (invarianti inter-contratto) sono stati invece tradotti in metodi di verifica che analizzano lo stato globale del contratto per confermare il rispetto delle specifiche.
+Quindi l'approccio usato è salvarsi la data (giorno, mese, anno) e l'età viene calcolata tramite un approssimazione.
+
+Il timestamp di un blocco viene convertito in una data usando una dipendenza esterna BokkyPooBahsDateTimeLibrary. Questo aumenta la TCB (Trusted Code Base),
+ma adesso l'età è calcolabile.
+
+Non è l'unico attributo diventato calcolabile, per esempio isMarried è stata resa una funzione.
 
 \subsection{ERC-165}
 
@@ -139,6 +144,10 @@ che serve per effettuare delle query allo smart contract per capire quali metodi
 
 Questo standard però non da garanzie sulla sicurezza, dato che uno smart contract può mentire su quali metodi implementa, ma è un modo miglire e standardizzato
 per controllare se l'address in input è uno smart contract.
+
+\subsection{Fuzzy Testing}
+Per la verifica della correttezza del software, anziché procedere con una verifica formale matematica completa, si è optato per il \textbf{Fuzz Testing}.
+Molti vincoli UML sono stati implementati direttamente tramite la sintassi di Solidity (modificatori di visibilità, tipi di dato, ereditarietà). I vincoli più complessi (invarianti inter-contratto) sono stati invece tradotti in metodi di verifica che analizzano lo stato globale del contratto per confermare il rispetto delle specifiche.
 
 \section{Implementazione dei Vincoli: Esercizio 1}
 
@@ -175,8 +184,9 @@ In termini pratici: se un contribuente $a$ è registrato come sposo di $b$, allo
 
 A differenza delle semplici invarianti di stato, questo vincolo implica una dipendenza circolare che non può essere modellata con la sola sintassi dichiarativa di Solidity. È necessario garantire che l'invariante \ref{V_spouse} sia preservata atomicamente durante l'esecuzione di qualsiasi metodo che modifichi lo stato coniugale (es. funzione \texttt{marry}).
 
-Se il Taxpayer $A$ esegue il metodo \texttt{marry} verso $B$, il contratto deve forzare anche l'aggiornamento dello stato di $B$ verso $A$ all'interno della stessa transazione. Questo scenario genera una potenziale ricorsione infinita se $B$ tentasse di richiamare \texttt{marry} su $A$.
-La soluzione implementata prevede l'introduzione di un caso base nella logica di ricorsione per terminare l'esecuzione una volta stabilita la relazione bidirezionale.
+Se il Taxpayer $A$ esegue il metodo \texttt{marry} verso $B$, il contratto deve forzare anche l'aggiornamento dello stato di $B$ verso $A$ all'interno della stessa transazione. Questo scenario genera una potenziale ricorsione infinita
+se $B$ tentasse di richiamare \texttt{marry} su $A$.
+La soluzione implementata prevede l'introduzione di un nuovo metodo che viene chiamato dalla funzione marry, e la pre-condizione è che il taxpayer che sposa è il chiamante della funzione acceptMarriage.
 
 La correttezza di questa implementazione è stata validata utilizzando \textbf{Echidna} per il fuzzing,
 creando una proprietà (property) specifica che modella l'invariante \ref{V_spouse} e tenta di falsificarla con input casuali.
@@ -206,7 +216,11 @@ Le invarianti quindi non vanno aggiunte nel contratto \textbf{Taxpeyer}, ma nel 
 
 Per lo scopo di questo progetto sono stati istanziati 8 Taxpayers di cui 2 over 65.
 
-Così \textbf{Echidna} proverà a sposare diverse compinazioni di questi 8 Taxpayer cercando di rendere falso invariante.
+Così \textbf{Echidna} proverà a sposare diverse compinazioni di questi 8 Taxpayer cercando di rendere falso l'invariante.
+
+Inoltre bisogna evitare le reentrancy. Dato che un contratto malevolo potrebbe implementare l'ERC-165, ma mentire su quali interfaccie implementa.
+
+Quindi per ovviare questo problema OpenZeepeling ha a disposizione
 
 \begin{figure}
 	\centering
@@ -230,21 +244,21 @@ function check_spouse(uint256 index) internal view returns (bool) {
 	\begin{lstlisting}[style=soliditystyle]
 function marry(address newSpouse) public nonReentrant {
         require(newSpouse != address(0));
-        require(!isMarried(), "Already married");
-        require(newSpouse != address(this), "Cannot marry self");
-
-        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
+        require(!isMarried());
+        require(newSpouse != address(this));
+        require(newSpouse is a Taxpayer ERC165);
 
         marriage.spouse = newSpouse;
-        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+        marriage.maxAllowance = getTaxAllowance() + newSpouse.getTaxAllowance();
 
-        ITaxpayer(newSpouse).acceptMarriage(address(this));
+        newSpouse.acceptMarriage(address(this));
+        assert(newSpouse.getSpouse() == address(this));
     }
 
     function acceptMarriage(address newSpouse) external nonReentrant {
-        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
-        require(msg.sender == newSpouse, "Caller must be the spouse");
-        require(!isMarried(), "Already married");
+        require(newSpouse is a Taxpayer ERC165);
+        require(msg.sender == newSpouse);
+        require(!isMarried());
 
         marriage.spouse = newSpouse;
         marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
@@ -253,7 +267,7 @@ function marry(address newSpouse) public nonReentrant {
 	\caption{Progettazione in Solidity del metodo \textbf{marry}. Esso chiama la funzione acceptMarriage sull'address dello sposo.
 		Così atomicamente il metodo \textbf{marry} sposa due taxpayer mantenendo le invarianti del modello UML vere prima e dopo l'esecuzione.
 		Chiaramente se lo sposo non implementa l'interfaccia ITaxpayer, allora sarebbe possibile un reentrancy attack. Possiamo evitarlo con la libreria di utilities OpenZeepeling % TODO: è sbagliato
-		che offre il costrutto nonReerancy.
+		che offre il costrutto nonReerancy. Tutte le pre-condizioni sono modellate con i require all'inizio di un metodo, e tutte le post-condizioni come assert alla fine del metodo.
 	}
 	\label{code:marry}
 \end{figure}
@@ -268,6 +282,40 @@ a come è stato implementato il metodo `marry`.
 \section{Esercizio 2}
 
 \subsection{Analisi}
+\begin{figure}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function marry(address newSpouse) public nonReentrant {
+        require(newSpouse != address(0));
+        require(!isMarried());
+        require(newSpouse != address(this));
+        require(newSpouse is a Taxpayer);
+
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+
+        ITaxpayer(newSpouse).acceptMarriage(address(this));
+        assert(newSpouse.getSpouse() == address(this));
+        assert(newSpouse.getMaxTaxAllowance() == marriage.maxAllowance);
+    }
+
+    function acceptMarriage(address newSpouse) external nonReentrant {
+        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId));
+        require(msg.sender == newSpouse, "Caller must be the spouse");
+        require(!isMarried());
+
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+    }
+\end{lstlisting}
+	\caption{Progettazione in Solidity del metodo \textbf{marry}. Esso chiama la funzione acceptMarriage sull'address dello sposo.
+		Così atomicamente il metodo \textbf{marry} sposa due taxpayer mantenendo le invarianti del modello UML vere prima e dopo l'esecuzione.
+		Chiaramente se lo sposo non implementa l'interfaccia ITaxpayer, allora sarebbe possibile un reentrancy attack. Possiamo evitarlo con la libreria di utilities OpenZeepeling % TODO: è sbagliato
+		che offre il costrutto nonReerancy. Tutte le pre-condizioni sono modellate con i require all'inizio di un metodo, e tutte le post-condizioni come assert alla fine del metodo.
+	}
+	\label{code:marry2}
+\end{figure}
+
 
 \begin{figure}[htbp]
 	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
