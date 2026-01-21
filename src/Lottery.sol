@@ -110,11 +110,12 @@ contract Lottery is ILottery, ERC165Query {
         require(revealed[iteration].length > 0, "No one was revealed.");
         uint256 total = 0;
         for (uint256 i = 0; i < revealed[iteration].length; i++) {
-            total += reveals[iteration][revealed[iteration][i]];
+            total += reveals[iteration][revealed[iteration][i]] % revealed[iteration].length;
         }
         address winner = revealed[iteration][total % revealed[iteration].length];
         state = State.NotStarted;
         iteration += 1;
         ILotteryReceiver(winner).winLottery();
+        return winner;
     }
 }

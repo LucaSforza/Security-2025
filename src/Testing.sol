@@ -28,7 +28,7 @@ contract EchidnaTesting {
     function check_spouse(uint256 index) internal view returns (bool) {
         Taxpayer t = taxpayers[index];
         if (t.isMarried()) {
-            return Taxpayer(t.getSpouse()).getSpouse() == address(t);
+            return Taxpayer(t.getSpouse()).getSpouse() == address(t) && t.getSpouse() != address(t);
         }
         return true;
     }

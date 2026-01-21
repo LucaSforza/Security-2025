@@ -38,7 +38,7 @@ contract EchidnaTesting {
     }
 
     function getMinWins() internal view returns (address minAddress, uint256 minValue) {
-        minAddress = getAddress(0);
+        minAddress = address(0);
         minValue = wins[minAddress];
         for (uint256 index = 1; index < taxpayers.length; index++) {
             address t = getAddress(index);
@@ -76,31 +76,30 @@ contract EchidnaTesting {
         }
     }
     event AssertionFailed(uint256);
-
     event LotteryEnded(uint256);
 
-    function create_lottery() public {
+    function create_lottery() internal {
         lottery.startLottery();
     }
 
-    function joinAll() public {
+    function joinAll() internal {
         // Pre-condizione: lotteria creata
         for (uint256 index = 0; index < taxpayers.length; index++) {
             taxpayers[index].joinLottery(address(lottery), getRandomNumber(index));
         }
     }
 
-    function revealAll() public {
+    function revealAll() internal {
         for (uint256 index = 0; index < taxpayers.length; index++) {
             taxpayers[index].revealLottery();
         }
     }
 
-    function endCommit() public {
+    function endCommit() internal {
         lottery.endCommit();
     }
 
-    function endLottery() public {
+    function endLottery() internal {
         address winner;
 
         try lottery.endLottery() returns (address res) {
@@ -122,19 +121,20 @@ contract EchidnaTesting {
         }
     }
 
+    function complete_iteration() public {
+        create_lottery();
+        joinAll();
+        endCommit();
+        revealAll();
+        endLottery();
+    }
+
     function echidna_check_lottery() public view returns (bool) {
         (address minAddress, uint256 minValue) = getMinWins();
         (address maxAddress, uint256 maxValue) = getMaxWins();
 
-        // if (wins[address(0)] > 0) return false; // TODO: qua da false
-
-        // Allow the lottery to run!
-        // Only check the distribution statistics after enough data is collected.
-        if (total_ends < 2) return true;
-        // Check if the spread between winners is acceptable
-        // Note: < 1 implies everyone has the EXACT same number of wins, which is statistically unlikely.
-        // You might want a higher threshold like < 5 depending on the number of iterations.
-        return false;
-        // return (maxValue - minValue) < 10;
+        if (wins[address(0)] > 0) return false;
+        if (total_ends < 4) return true;
+        return maxValue - minValue < 50;
     }
 }
