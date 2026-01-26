@@ -290,7 +290,8 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
     function revealLottery() public {
         Lottery l = Lottery(joinedLottery);
         l.reveal(rev);
-        rev = 0;
+        rev = 0; // TODO: dire nella relazione che questo parametro non è sicuro, dato che qualsiasi persona può leggere l'attributo rev anche se è private
+        // ma per motivi di testing è stato lasciato, ma in production va levato.
     }
 
     function winLottery() external {

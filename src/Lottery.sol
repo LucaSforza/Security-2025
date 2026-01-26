@@ -43,13 +43,11 @@ contract Lottery is ILottery, ERC165Query {
 
     mapping(bytes4 => bool) supportedInterfaces;
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) external view virtual override returns (bool) {
+    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return supportedInterfaces[interfaceId];
     }
 
-    // address public owner;
+    address public owner;
     mapping(uint256 => mapping(address => bytes32)) public commits;
     mapping(uint256 => mapping(address => uint256)) public reveals;
     mapping(uint256 => address[]) public revealed;
@@ -67,7 +65,7 @@ contract Lottery is ILottery, ERC165Query {
         // period = p;
         // startTime = 0;
         // endTime = 0;
-        // owner = msg.sender;
+        owner = msg.sender;
 
         supportedInterfaces[type(IERC165).interfaceId] = true;
         supportedInterfaces[type(ILottery).interfaceId] = true;
@@ -78,7 +76,7 @@ contract Lottery is ILottery, ERC165Query {
     //If the lottery has not started, anyone can invoke a lottery.
     function startLottery() public {
         require(State.NotStarted == state);
-        // require(msg.sender == owner);
+        require(msg.sender == owner);
         state = State.Started;
     }
 
@@ -87,10 +85,7 @@ contract Lottery is ILottery, ERC165Query {
         // require(block.timestamp >= startTime);
         require(State.Started == state);
         require(
-            doesContractImplementInterface(
-                msg.sender,
-                type(ILotteryReceiver).interfaceId
-            ),
+            doesContractImplementInterface(msg.sender, type(ILotteryReceiver).interfaceId),
             "the contract doen't implement ILotteryReceiver interface"
         );
         commits[iteration][msg.sender] = y;
@@ -98,6 +93,7 @@ contract Lottery is ILottery, ERC165Query {
 
     function endCommit() public {
         require(state == State.Started);
+        require(owner == msg.sender);
         state = State.Ending;
     }
 
@@ -114,18 +110,14 @@ contract Lottery is ILottery, ERC165Query {
     // returns the address of the winner
     function endLottery() public returns (address) {
         // require(block.timestamp >= endTime);
-        // require(revealed.length > 0);
+        require(owner == msg.sender);
         require(State.Ending == state, "Not good state.");
         require(revealed[iteration].length > 0, "No one was revealed.");
         uint256 total = 0;
         for (uint256 i = 0; i < revealed[iteration].length; i++) {
-            total +=
-                reveals[iteration][revealed[iteration][i]] %
-                revealed[iteration].length;
+            total += reveals[iteration][revealed[iteration][i]] % revealed[iteration].length;
         }
-        address winner = revealed[iteration][
-            total % revealed[iteration].length
-        ];
+        address winner = revealed[iteration][total % revealed[iteration].length];
         state = State.NotStarted;
         iteration += 1;
         ILotteryReceiver(winner).winLottery();

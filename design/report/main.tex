@@ -387,10 +387,19 @@ per poter chiamare il metodo `redeemTaxAllowance`.
 
 \begin{figure}[htbp]
 	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter4.png}}
-	\caption{UML Class Diagram of a Token.}
+	\caption{Nella fase di design della metodolia Agile iterazione numero 4, è stata aggiunta la modellazione della Lotteria. Una lotteria deve implementare lo standard ERC165, in più deve
+		implementare i seguenti metodi: startLottery, commit, endCommit, reveal, endLottery. È stata migliorata l'implementazione in modo che la lotteria non sia "usa e getta", ma invece può essere
+		reiniziata quante volte si vuole. È stato implementato il design pattern di una macchina a stati finiti. Ogni fase è rappresentata da uno stato, dove in un certo stato è possibile fare solo determinate operazioni.
+		Questo migliora l'information flow della lotteria, rendendo più difficile per i taxpayer barare. L'owner della lotteria decide in quale stato si deve trovare la lotteria. Nella fase di commit i Taxpayer possono fare i loro commit e solo nella fase di rivelazione
+		possono rivelare i loro valori. Questo comportamento viene mostrato nella figura \ref{uml:lottery}. In più ogni lotteria interagisce solo con l'interfaccia ILotteryReceiver, quindi i Taxpayer devono implentare questa interfaccia.}
 	\label{uml:agile4}
 \end{figure}
 
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/lottery.png}}
+	\caption{UML State Diagram of the Lottery.}
+	\label{uml:lottery}
+\end{figure}
 
 \subsection{Progettazione}
 

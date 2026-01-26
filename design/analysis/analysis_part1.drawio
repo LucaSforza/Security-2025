@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.0 Chrome/140.0.7339.249 Electron/38.7.2 Safari/537.36" version="29.3.0">
   <diagram name="Page-1" id="2QgMKyrjdVpumMaxxoHU">
-    <mxGraphModel dx="3081" dy="455" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="4663" dy="1653" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -264,8 +264,8 @@
         <mxCell id="MPbQIIwyXZr_snEbIGLt-32" parent="1" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Contraint:&lt;/h1&gt;&lt;p&gt;ALL t_1,t_2,a maxAllowance(t_1,t_2,a) =&amp;gt; a = t_1.getTaxAllowance() + t_2.getTaxAllowance()&lt;/p&gt;" vertex="1">
           <mxGeometry height="70" width="540" x="-870" y="1289" as="geometry" />
         </mxCell>
-        <mxCell id="MPbQIIwyXZr_snEbIGLt-33" parent="1" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;ILottery&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ startLottery()&lt;br&gt;+ commit(bytes32)&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ reveal(uint)&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ endLottery()&lt;/p&gt;" vertex="1">
-          <mxGeometry height="110" width="190" x="-160" y="1000" as="geometry" />
+        <mxCell id="MPbQIIwyXZr_snEbIGLt-33" parent="1" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;i&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/i&gt;&lt;br&gt;&lt;b&gt;ILottery&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ startLottery()&lt;br&gt;+ commit(bytes32)&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ endCommit()&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ reveal(uint)&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ endLottery()&lt;/p&gt;" vertex="1">
+          <mxGeometry height="120" width="190" x="-160" y="1000" as="geometry" />
         </mxCell>
         <mxCell id="MPbQIIwyXZr_snEbIGLt-34" edge="1" parent="1" source="MPbQIIwyXZr_snEbIGLt-33" style="endArrow=block;endSize=16;endFill=0;html=1;rounded=0;" target="MPbQIIwyXZr_snEbIGLt-11" value="">
           <mxGeometry relative="1" width="160" as="geometry">
