@@ -19,6 +19,7 @@ interface ILotteryReceiver {
     function joinLottery(address lot, uint256 r) external;
     function revealLottery() external;
     function winLottery() external;
+    function getWins() external returns (uint256);
 }
 
 interface ITaxpayer is ILotteryReceiver, IERC165 {
@@ -135,6 +136,7 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         income = 0;
         redeemed = false;
         taxAllowance = DEFAULT_ALLOWANCE;
+        wins = 0;
     }
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
@@ -196,17 +198,20 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         marriage.spouse = address(0); // non serve mettere maxTaxAllowance a zero. Più gas efficient
         if (this.isReedemed()) taxAllowance = ALLOWANCE_OAP;
         else taxAllowance = DEFAULT_ALLOWANCE;
+        taxAllowance += 2000 * wins;
         ITaxpayer(oldSpouse).acceptDivorce();
         _assert(ITaxpayer(oldSpouse).getSpouse() == address(0), "the spouse must be zero");
         _assert(
-            !ITaxpayer(oldSpouse).isReedemed() || ITaxpayer(oldSpouse).getTaxAllowance() == ALLOWANCE_OAP,
+            !ITaxpayer(oldSpouse).isReedemed()
+                || ITaxpayer(oldSpouse).getTaxAllowance() == ALLOWANCE_OAP + ITaxpayer(oldSpouse).getWins() * 2000,
             string.concat(
                 "old spouse is reedemed, but the tax allowance is: ",
                 Strings.toString(ITaxpayer(oldSpouse).getTaxAllowance())
             )
         );
         _assert(
-            ITaxpayer(oldSpouse).isReedemed() || ITaxpayer(oldSpouse).getTaxAllowance() == DEFAULT_ALLOWANCE,
+            ITaxpayer(oldSpouse).isReedemed()
+                || ITaxpayer(oldSpouse).getTaxAllowance() == DEFAULT_ALLOWANCE + ITaxpayer(oldSpouse).getWins() * 2000,
             string.concat(
                 "old spouse is not reedemed, but the tax allowance is: ",
                 Strings.toString(ITaxpayer(oldSpouse).getTaxAllowance())
@@ -218,6 +223,7 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         require(marriage.spouse == msg.sender);
         if (this.isReedemed()) taxAllowance = ALLOWANCE_OAP;
         else taxAllowance = DEFAULT_ALLOWANCE;
+        taxAllowance += 2000 * wins;
         // It is not required to check that the spouse implement ITaxpayer interface, we assumed so beacuse we have checked
         // it that the spouse implement this interface when we marry them TODO: dire meglio
         // require(doesContractImplementInterface(oldSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
@@ -294,13 +300,20 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         // ma per motivi di testing è stato lasciato, ma in production va levato.
     }
 
+    uint256 wins;
+
     function winLottery() external {
         require(msg.sender == joinedLottery);
         taxAllowance += 2000;
+        wins += 1;
         joinedLottery = address(0);
         if (isMarried()) {
             marriage.maxAllowance += 2000; // (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
             ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse(2000);
         }
+    }
+
+    function getWins() external returns (uint256) {
+        return wins;
     }
 }
