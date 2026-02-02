@@ -13,6 +13,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+import "./FactoryTaxpayer.sol";
+
 using BokkyPooBahsDateTimeLibrary for uint256;
 
 interface ILotteryReceiver {
@@ -42,6 +44,8 @@ interface ITaxpayer is ILotteryReceiver, IERC165 {
 contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
     // uint256 age; This is wrong! a taxpayer should increment his age every birthday manually
     // This can add a lot of costs beacuse updating this attribute need GAS to be updated.
+
+    FactoryTaxpayer immutable f;
 
     struct Marriage {
         address spouse;
@@ -118,11 +122,12 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
     uint256 private rev; // changed must be private
 
     //Parents are taxpayers
-    constructor(address p1, address p2, uint8 day, uint8 month, uint16 year) {
+    constructor(FactoryTaxpayer factory, address p1, address p2, uint8 day, uint8 month, uint16 year) {
         // changed new constructor argument and pre-cond/ition to check if the birthday is consistent
         // changed pre-condition about the interface of parents
         require(month > 0 && month <= 12);
         require(day > 0 && day <= 31);
+        f = factory;
         if (p1 != address(0)) {
             require(doesContractImplementInterface(p1, type(ITaxpayer).interfaceId), "parent1 is not a Taxpayer");
         }
@@ -287,6 +292,7 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         // What if we joing more than one lottery?
         require(rev == 0, "cannot join more than one lottery");
         require(doesContractImplementInterface(lot, type(ILottery).interfaceId), "lot is not a lottery");
+        require(FactoryTaxpayer(f).isLottery(lot));
         Lottery l = Lottery(lot);
         l.commit(keccak256(abi.encode(r)));
         rev = r;

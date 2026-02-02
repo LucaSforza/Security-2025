@@ -3,11 +3,14 @@ pragma solidity ^0.8.13;
 
 import {Taxpayer} from "../src/Taxpayer.sol";
 import {Lottery} from "../src/Lottery.sol";
+import "./FactoryTaxpayer.sol";
 
 contract EchidnaTesting {
+    FactoryTaxpayer f;
     Taxpayer[] taxpayers;
 
     constructor() {
+        f = new FactoryTaxpayer(address(this));
         addTaxpayer();
         addTaxpayer();
         addTaxpayer();
@@ -18,11 +21,13 @@ contract EchidnaTesting {
     }
 
     function addTaxpayer() internal {
-        taxpayers.push(new Taxpayer(address(0), address(0), 28, 5, 2003));
+        address t = f.creareTaxpayer(address(0), address(0), 28, 5, 2003);
+        taxpayers.push(Taxpayer(t));
     }
 
     function addOldTaxpayer() internal {
-        taxpayers.push(new Taxpayer(address(0), address(0), 28, 5, 1950));
+        address t = f.creareTaxpayer(address(0), address(0), 28, 5, 1950);
+        taxpayers.push(Taxpayer(t));
     }
 
     function check_spouse(uint256 index) internal view returns (bool) {

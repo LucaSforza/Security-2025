@@ -4,15 +4,19 @@ pragma solidity ^0.8.13;
 import {Taxpayer} from "../src/Taxpayer.sol";
 import {Lottery} from "../src/Lottery.sol";
 
+import "./FactoryTaxpayer.sol";
+
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract EchidnaTesting {
     Taxpayer[] taxpayers;
     mapping(address => uint256) wins;
     Lottery lottery;
+    FactoryTaxpayer f;
     uint256 total_ends;
 
     constructor() {
+        f = FactoryTaxpayer(address(this));
         addTaxpayer();
         addTaxpayer();
         addTaxpayer();
@@ -21,7 +25,7 @@ contract EchidnaTesting {
         addOldTaxpayer();
         addOldTaxpayer();
 
-        lottery = new Lottery(0);
+        lottery = Lottery(f.getLottery());
     }
 
     function getMaxWins() internal view returns (address maxAddress, uint256 maxValue) {
@@ -55,11 +59,13 @@ contract EchidnaTesting {
     }
 
     function addTaxpayer() internal {
-        taxpayers.push(new Taxpayer(address(0), address(0), 28, 5, 2003));
+        address t = f.creareTaxpayer(address(0), address(0), 28, 5, 2003);
+        taxpayers.push(Taxpayer(t));
     }
 
     function addOldTaxpayer() internal {
-        taxpayers.push(new Taxpayer(address(0), address(0), 28, 5, 1950));
+        address t = f.creareTaxpayer(address(0), address(0), 28, 5, 1950);
+        taxpayers.push(Taxpayer(t));
     }
 
     function getRandomNumber(uint256 seed) internal view returns (uint256) {
@@ -135,6 +141,6 @@ contract EchidnaTesting {
 
         if (wins[address(0)] > 0) return false;
         if (total_ends < 4) return true;
-        return maxValue - minValue < 50;
+        return maxValue - minValue < 25;
     }
 }

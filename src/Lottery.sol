@@ -9,7 +9,7 @@ import {ERC165Query} from "./ERC165Query.sol";
 
 import "./BokkyPooBahsDateTimeLibrary.sol";
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./FactoryTaxpayer.sol";
 
 using BokkyPooBahsDateTimeLibrary for uint256;
 
@@ -47,7 +47,7 @@ contract Lottery is ILottery, ERC165Query {
         return supportedInterfaces[interfaceId];
     }
 
-    address public owner;
+    address immutable owner;
     mapping(uint256 => mapping(address => bytes32)) public commits;
     mapping(uint256 => mapping(address => uint256)) public reveals;
     mapping(uint256 => address[]) public revealed;
@@ -61,11 +61,11 @@ contract Lottery is ILottery, ERC165Query {
     State state;
 
     // Initialize the registry with the lottery period.
-    constructor(uint256 p) {
+    constructor(address _owner) {
         // period = p;
         // startTime = 0;
         // endTime = 0;
-        owner = msg.sender;
+        owner = _owner;
 
         supportedInterfaces[type(IERC165).interfaceId] = true;
         supportedInterfaces[type(ILottery).interfaceId] = true;

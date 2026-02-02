@@ -5,9 +5,10 @@ import {Test} from "forge-std/Test.sol";
 import {Lottery} from "../src/Lottery.sol";
 
 contract LotteryTest is Test {
-    Lottery public lottery;
+    // Lottery public lottery;
+    //
+    // function setUp() public {
+    //     lottery = new Lottery(10);
+    // }
 
-    function setUp() public {
-        lottery = new Lottery(10);
     }
-}

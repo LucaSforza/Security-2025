@@ -10,10 +10,10 @@ contract LotteryScript is Script {
     function setUp() public {}
 
     function run() public {
-        vm.startBroadcast();
-
-        lottery = new Lottery(10);
-
-        vm.stopBroadcast();
+        // vm.startBroadcast();
+        //
+        // lottery = new Lottery(10);
+        //
+        // vm.stopBroadcast();
     }
 }
