@@ -165,7 +165,6 @@ Questo garantisce sicurezza assumendo che l'owner della Factory non sia comprome
 \end{figure}
 
 Il primo esercizio richiede l'implementazione del vincolo di reciprocità coniugale ("spouse").
-Formalmente, si deve verificare la seguente formula della logica del primo ordine:
 
 In figura \ref{uml:agile1} è raffigurato la modellazione UML del sistema.
 Esso definisce l'invariante del sistema, la quale può essere per la maggior parte vincolata tramite la sintassi del linguaggio Solidity.
@@ -179,8 +178,9 @@ UML descrive il sistema diviso in due parti.
 La parte per interfacciarsi con le lotterie (che per la prima iterazione della metodologia Agile è stata ignorata per ora).
 E una parte per interfacciarsi con Taxpayer.
 
-I vincoli esterni descritti del diagramma sono garantiti dall'implementazione del metodo `marry`, dove atomicamente
-sposa due Taxpayer, invece che banalmente essere un setter.
+
+
+Formalmente, si deve verificare la seguente formula della logica del primo ordine:
 
 \begin{equation}
 	\label{V_spouse}
@@ -189,49 +189,19 @@ sposa due Taxpayer, invece che banalmente essere un setter.
 
 Se un contribuente $a$ è registrato come sposo di $b$, allora $b$ deve necessariamente avere $a$ registrato come proprio sposo.
 
-A differenza delle semplici invarianti di stato, questo vincolo implica una dipendenza circolare che non può essere modellata con la sola sintassi di Solidity.
-È necessario garantire che l'invariante \ref{V_spouse} sia preservata atomicamente durante l'esecuzione di qualsiasi metodo
-che modifichi lo stato coniugale (es. funzione \texttt{marry}).
-
 Se il Taxpayer $A$ esegue il metodo \texttt{marry} verso $B$, il contratto deve forzare anche l'aggiornamento
 dello stato di $B$ verso $A$ all'interno della stessa transazione. Questo scenario genera una potenziale ricorsione infinita
 se $B$ tentasse di richiamare \texttt{marry} su $A$.
 
+\subsection{Progettazione}
+
 La soluzione implementata prevede l'introduzione di un nuovo metodo che viene chiamato dalla funzione marry,
 e la pre-condizione è che il taxpayer che sposa è il chiamante della funzione acceptMarriage.
 
-La correttezza di questa implementazione è stata validata utilizzando \textbf{Echidna} per il fuzzing,
+I vincoli esterni descritti del diagramma sono garantiti dall'implementazione del metodo `marry`, dove atomicamente
+sposa due Taxpayer, invece che banalmente essere un setter.
 
-% TODO: aggiungere screenshot
-
-\subsection{Progettazione}
-
-Per poter verificare che l'invariante sia rispettata esistono due modi possibili di farlo con echidna.
-
-Definire le invarianti direttamente nello smart contract di interesse (\textbf{Taxpayer.sol}), questo funziona finchè l'invariante
-deve essere verificare localmente in un instance di Taxpayer.
-Però l'invariante \ref{V_spouse} riguarda più istance di Taxpayer.
-
-\textbf{Echidna} di default istanzia il contratto solo una volta e poi fa fuzzy testing sul contratto di riferimento, esso
-non proverà ad istanziare il contratto più volte per verificare che l'invariante rimanga vero. Il massimo che farebbe \textbf{Echidna}
-è quello di sposare se stesso.
-
-Quindi va trovata una soluzione differente.
-
-\textbf{Echidna} ha la possibilià di definire le sui configurazioni interne dentro un file \text{yaml}
-, un flag che può essere attivato è \textbf{allContracts} che se definito \textbf{true} allora \textbf{Echidna} farà fuzzy tesing non solo
-sul contratto di riferimento, ma anche su tutti i contratti che il contratto di riferimento ha istanziato.
-
-Quindi un altra soluzione possibile è quella di scrivere un nuovo contratto, chiamato \textbf{EchidnaTesting} dove nel suo costruttore
-istanzia vari oggetti della classe \textbf{Taxpayer} e lo aggiunge in un array di Taxpayers.
-
-Le invarianti quindi non vanno aggiunte nel contratto \textbf{Taxpeyer}, ma nel nuovo contratto di test.
-
-Per lo scopo di questo progetto sono stati istanziati 8 Taxpayers di cui 2 over 65.
-
-Così \textbf{Echidna} proverà a sposare diverse compinazioni di questi 8 Taxpayer cercando di rendere falso l'invariante.
-
-Reentrency attacks non sono possibili dato che tutti i Taxpayer sono stati creati da un trusted party.
+La correttezza di questa implementazione è stata validata utilizzando \textbf{Echidna} per il fuzzing.
 
 \begin{figure}
 	\centering
@@ -277,15 +247,45 @@ function marry(address newSpouse) public nonReentrant {
 \end{lstlisting}
 	\caption{
 		Progettazione in Solidity del metodo \textbf{marry}. Esso chiama la funzione acceptMarriage sull'address dello sposo.
-		Così atomicamente il metodo \textbf{marry} sposa due taxpayer mantenendo le invarianti del modello UML vere prima e dopo l'esecuzione.
-		Chiaramente se lo sposo non implementa l'interfaccia ITaxpayer, allora sarebbe possibile un reentrancy attack. Possiamo evitarlo con la libreria di utilities OpenZeppeling
-		che offre il costrutto nonReerancy. Tutte le pre-condizioni sono modellate con i require all'inizio di un metodo, e tutte le post-condizioni come assert alla fine del metodo.
 	}
 	\label{code:marry}
 \end{figure}
 
 È possibile leggere l'implementazioni nelle figure \ref{code:V_spouse}
 \ref{code:marry}.
+
+Di seguito ecco lo screenshot dove eseguo fuzzy tesing sia sul contratto originale che nella mia implementazione descritta.
+
+% TODO: aggiungere screenshot
+
+\subsection{Configurazione Echidna}
+
+Per poter verificare che l'invariante sia rispettata esistono due modi possibili di farlo con echidna.
+
+Definire le invarianti direttamente nello smart contract di interesse (\textbf{Taxpayer.sol}), questo funziona finchè l'invariante
+deve essere verificare localmente in un instance di Taxpayer.
+Però l'invariante \ref{V_spouse} riguarda più istance di Taxpayer.
+
+\textbf{Echidna} di default istanzia il contratto solo una volta e poi fa fuzzy testing sul contratto di riferimento, esso
+non proverà ad istanziare il contratto più volte per verificare che l'invariante rimanga vero. Il massimo che farebbe \textbf{Echidna}
+è quello di sposare se stesso.
+
+Quindi va trovata una soluzione differente.
+
+\textbf{Echidna} ha la possibilià di definire le sui configurazioni interne dentro un file \text{yaml}
+, un flag che può essere attivato è \textbf{allContracts} che se definito \textbf{true} allora \textbf{Echidna} farà fuzzy tesing non solo
+sul contratto di riferimento, ma anche su tutti i contratti che il contratto di riferimento ha istanziato.
+
+Quindi un altra soluzione possibile è quella di scrivere un nuovo contratto, chiamato \textbf{EchidnaTesting} dove nel suo costruttore
+istanzia vari oggetti della classe \textbf{Taxpayer} e lo aggiunge in un array di Taxpayers.
+
+Le invarianti quindi non vanno aggiunte nel contratto \textbf{Taxpeyer}, ma nel nuovo contratto di test.
+
+Per lo scopo di questo progetto sono stati istanziati 8 Taxpayers di cui 2 over 65.
+
+Così \textbf{Echidna} proverà a sposare diverse compinazioni di questi 8 Taxpayer cercando di rendere falso l'invariante.
+
+Reentrency attacks non sono possibili dato che tutti i Taxpayer sono stati creati da un trusted party.
 
 
 \section{Esercizio 2}
