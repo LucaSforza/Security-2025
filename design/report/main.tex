@@ -119,7 +119,8 @@ Grazie ad esso è possibile formattare il codice solidity e utilizzare un linter
 
 Oltre alle problematiche sintattiche, il codice presentava vulnerabilità logiche significative. Queste sono state individuate grazie all'approccio \textit{Model Driven}.
 
-L'utilizzo di diagrammi delle classi UML permette una traduzione naturale verso il codice Solidity. In letteratura \cite{jurgelaitis2022} sono proposti diversi meta-modelli per facilitare questa transizione.
+L'utilizzo di diagrammi delle classi UML permette una traduzione naturale verso il codice Solidity. In letteratura % \cite{jurgelaitis2022}
+sono proposti diversi meta-modelli per facilitare questa transizione.
 
 Il diagramma delle classi UML definisce i vincoli del sistema sotto forma di invarianti, le quali devono rimanere vere durante l'intera esecuzione delle transazioni.
 
@@ -129,7 +130,7 @@ Tale approccio è prono a errori e disallineamenti e non è gas efficient.
 L'età invece sarebbe calcolabile se ci si salvassimo la data di nascita. Qua nasce un problema perchè i blocchi della blockchain di Ethereum usano il timestamp
 UNIX e quindi lo Zero è il 1970, quindi non è possibile rappresentare Taxpayer over 65.
 
-Quindi l'approccio usato è salvarsi la data (giorno, mese, anno) e l'età viene calcolata tramite un approssimazione.
+Quindi l'approccio usato è salvarsi la data (giorno, mese, anno) e l'età viene calcolata tramite un approssimazione per la gestione degli anni bisestili.
 
 Il timestamp di un blocco viene convertito in una data usando una dipendenza esterna BokkyPooBahsDateTimeLibrary. Questo aumenta la TCB (Trusted Code Base),
 ma adesso l'età è calcolabile.
@@ -139,19 +140,17 @@ Non è l'unico attributo diventato calcolabile, per esempio isMarried è stata r
 \subsection{Factory Taxpayer}
 
 Un altra criticità del codice fornito è il metodo \textbf{isContract}. Esso serve per verificare che un address in input è uno smart contract oppure no,
-ma questa implementazione non assicurara dato che uno smart contract malevolo potrebbe avere questo attributo, mentendo sul fatto di quali functioni esso implementa.
-Questo potrebbe portare a reentrency attacks.
+ma questa implementazione non assicura che un dato smart contract abbia i metodi implementati dell'interfaccia Taxpayer.
+Quindi un contratto malevolo potrebbe avere questo attributo, mentendo sul fatto di quali functioni esso implementa.
+Formalmente, un qualsiasi smart contract potrebbe poter portare lo stato del sistema in una configurazione non valida usando reentrency attacks.
 
-Questo può essere risolto creando una classe \textbf{FactoryTaxpayer} gestita dallo stato. Essa ha un owner che permette di istanziare taxpayer. Essi li registra in un loro mapping interno.
+Questo può essere risolto creando una classe \textbf{FactoryTaxpayer} gestita dallo stato. Essa ha un owner che permette di istanziare taxpayer.
+Essi li registra in un loro mapping interno.
 
 Il riferimento a questo contratto è salvato nelle istanze dei taxpayer, i taxpayer possono fare query alla factory per verificare che un certo constratto sia un Taxpayer
-affidabile.
+affid abile usando il metodo.
 
 Questo garantisce sicurezza assumendo che l'owner della Factory non sia compromesso.
-
-\subsection{Fuzzy Testing}
-Per la verifica della correttezza del software, anziché procedere con una verifica formale matematica completa, si è optato per il \textbf{Fuzz Testing}.
-Molti vincoli UML sono stati implementati direttamente tramite la sintassi di Solidity (modificatori di visibilità, tipi di dato, ereditarietà). I vincoli più complessi (invarianti inter-contratto) sono stati invece tradotti in metodi di verifica che analizzano lo stato globale del contratto per confermare il rispetto delle specifiche.
 
 \section{Implementazione dei Vincoli: Esercizio 1}
 
@@ -160,18 +159,7 @@ Molti vincoli UML sono stati implementati direttamente tramite la sintassi di So
 \begin{figure}[htbp]
 	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter1.png}}
 	\caption{
-		In figura è raffigurato la modellazione UML del sistema.
-		Esso definisce l'invariante del sistema, la quale può essere per la maggior parte vincolata tramite la sintassi del linguaggio Solidity.
-		In aggiunta del vincoli imposti dal diagramma delle classi, esistono vincoli esterni.
-		I metodi definiti devono mantenere atomicamente l'invariante durante l'iterazione del sistema. Essi modificano lo stato del sistema e
-		non devono portare lo stato in una configurazione invalida. Quindi si devono aggiungere delle pre-condizioni ai metodi per poter essere eseguiti.
-		Infatti bisogna evitare gli reentrency attacks, poichè uno smart contract malevolo potrebbe, durante l'esecuzione di un metodo,
-		riuscire ad evitare delle pre-condizioni e portare il sistema in uno stato invalido.
-		UML descrive il sistema diviso in due parti. La parte per interfacciarsi con le lotterie (che per la prima iterazione della metodologia Agile è stata ignorata per ora)
-		. E una parte per interfacciarsi con Taxpayer.
-		Ogni classe deve implementare ERC-165 e lo smart contract Taxpayer quindi deve avere un metodo per poter fare query.
-		I vincoli esterni descritti del diagramma sono garantiti dall'implementazione del metodo `marry`, dove atomicamente
-		sposa due Taxpayer, invece che banalmente essere un setter.
+		Modello delle classi UML dell'iterazione Agile 1.
 	}
 	\label{uml:agile1}
 \end{figure}
@@ -179,25 +167,46 @@ Molti vincoli UML sono stati implementati direttamente tramite la sintassi di So
 Il primo esercizio richiede l'implementazione del vincolo di reciprocità coniugale ("spouse").
 Formalmente, si deve verificare la seguente formula della logica del primo ordine:
 
+In figura \ref{uml:agile1} è raffigurato la modellazione UML del sistema.
+Esso definisce l'invariante del sistema, la quale può essere per la maggior parte vincolata tramite la sintassi del linguaggio Solidity.
+In aggiunta del vincoli imposti dal diagramma delle classi, esistono vincoli esterni.
+
+I metodi definiti devono mantenere atomicamente l'invariante durante l'iterazione del sistema. Essi modificano lo stato del sistema e
+non devono portare lo stato in una configurazione invalida.
+Quindi si devono aggiungere delle pre-condizioni ai metodi per poter essere eseguiti.
+
+UML descrive il sistema diviso in due parti.
+La parte per interfacciarsi con le lotterie (che per la prima iterazione della metodologia Agile è stata ignorata per ora).
+E una parte per interfacciarsi con Taxpayer.
+
+I vincoli esterni descritti del diagramma sono garantiti dall'implementazione del metodo `marry`, dove atomicamente
+sposa due Taxpayer, invece che banalmente essere un setter.
+
 \begin{equation}
 	\label{V_spouse}
 	\forall a \in \text{Taxpayer}, \forall b \in \text{Taxpayer}: \text{spouse}(a,b) \implies \text{spouse}(b,a)
 \end{equation}
 
-In termini pratici: se un contribuente $a$ è registrato come sposo di $b$, allora $b$ deve necessariamente avere $a$ registrato come proprio sposo.
+Se un contribuente $a$ è registrato come sposo di $b$, allora $b$ deve necessariamente avere $a$ registrato come proprio sposo.
 
-A differenza delle semplici invarianti di stato, questo vincolo implica una dipendenza circolare che non può essere modellata con la sola sintassi dichiarativa di Solidity. È necessario garantire che l'invariante \ref{V_spouse} sia preservata atomicamente durante l'esecuzione di qualsiasi metodo che modifichi lo stato coniugale (es. funzione \texttt{marry}).
+A differenza delle semplici invarianti di stato, questo vincolo implica una dipendenza circolare che non può essere modellata con la sola sintassi di Solidity.
+È necessario garantire che l'invariante \ref{V_spouse} sia preservata atomicamente durante l'esecuzione di qualsiasi metodo
+che modifichi lo stato coniugale (es. funzione \texttt{marry}).
 
-Se il Taxpayer $A$ esegue il metodo \texttt{marry} verso $B$, il contratto deve forzare anche l'aggiornamento dello stato di $B$ verso $A$ all'interno della stessa transazione. Questo scenario genera una potenziale ricorsione infinita
+Se il Taxpayer $A$ esegue il metodo \texttt{marry} verso $B$, il contratto deve forzare anche l'aggiornamento
+dello stato di $B$ verso $A$ all'interno della stessa transazione. Questo scenario genera una potenziale ricorsione infinita
 se $B$ tentasse di richiamare \texttt{marry} su $A$.
-La soluzione implementata prevede l'introduzione di un nuovo metodo che viene chiamato dalla funzione marry, e la pre-condizione è che il taxpayer che sposa è il chiamante della funzione acceptMarriage.
+
+La soluzione implementata prevede l'introduzione di un nuovo metodo che viene chiamato dalla funzione marry,
+e la pre-condizione è che il taxpayer che sposa è il chiamante della funzione acceptMarriage.
 
 La correttezza di questa implementazione è stata validata utilizzando \textbf{Echidna} per il fuzzing,
-creando una proprietà (property) specifica che modella l'invariante \ref{V_spouse} e tenta di falsificarla con input casuali.
+
+% TODO: aggiungere screenshot
 
 \subsection{Progettazione}
 
-Per poter verificare che l'invariante sia rispettata esistono due modi possibili di farlo in echidna.
+Per poter verificare che l'invariante sia rispettata esistono due modi possibili di farlo con echidna.
 
 Definire le invarianti direttamente nello smart contract di interesse (\textbf{Taxpayer.sol}), questo funziona finchè l'invariante
 deve essere verificare localmente in un instance di Taxpayer.
@@ -222,9 +231,7 @@ Per lo scopo di questo progetto sono stati istanziati 8 Taxpayers di cui 2 over 
 
 Così \textbf{Echidna} proverà a sposare diverse compinazioni di questi 8 Taxpayer cercando di rendere falso l'invariante.
 
-Inoltre bisogna evitare le reentrancy. Dato che un contratto malevolo potrebbe implementare l'ERC-165, ma mentire su quali interfaccie implementa.
-
-Quindi per ovviare questo problema OpenZeppeling ha a disposizione
+Reentrency attacks non sono possibili dato che tutti i Taxpayer sono stati creati da un trusted party.
 
 \begin{figure}
 	\centering
@@ -277,12 +284,9 @@ function marry(address newSpouse) public nonReentrant {
 	\label{code:marry}
 \end{figure}
 
-Per la progettazione dell'invariante vedere figura \ref{code:V_spouse}.
+È possibile leggere l'implementazioni nelle figure \ref{code:V_spouse}
+\ref{code:marry}.
 
-Invece per la modifica del metodo `marry` vedere \ref{code:marry}.
-
-Ovviamente quest'invariante deve essere sempre vera anche quando i Taxpayer divorziano. Quindi il divorzio anch'esso sarà ricorsivo in un modo simile
-a come è stato implementato il metodo `marry`.
 
 \section{Esercizio 2}
 
@@ -290,11 +294,11 @@ a come è stato implementato il metodo `marry`.
 \begin{figure}
 	\centering
 	\begin{lstlisting}[style=soliditystyle]
-function marry(address newSpouse) public nonReentrant {
+  function marry(address newSpouse) public {
         require(newSpouse != address(0));
         require(!isMarried());
         require(newSpouse != address(this));
-        require(newSpouse is a Taxpayer);
+        require(factory.isTaxpayer(newSpouse));
 
         marriage.spouse = newSpouse;
         marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
@@ -304,7 +308,7 @@ function marry(address newSpouse) public nonReentrant {
         assert(newSpouse.getMaxTaxAllowance() == marriage.maxAllowance);
     }
 
-    function acceptMarriage(address newSpouse) external nonReentrant {
+    function acceptMarriage(address newSpouse) external {
         require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId));
         require(msg.sender == newSpouse, "Caller must be the spouse");
         require(!isMarried());
@@ -313,10 +317,14 @@ function marry(address newSpouse) public nonReentrant {
         marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
     }
 \end{lstlisting}
-	\caption{Progettazione in Solidity del metodo \textbf{marry}. Esso chiama la funzione acceptMarriage sull'address dello sposo.
-		Così atomicamente il metodo \textbf{marry} sposa due taxpayer mantenendo le invarianti del modello UML vere prima e dopo l'esecuzione.
-		Chiaramente se lo sposo non implementa l'interfaccia ITaxpayer, allora sarebbe possibile un reentrancy attack. Possiamo evitarlo con la libreria di utilities OpenZeppeling % TODO: è sbagliato
-		che offre il costrutto nonReerancy. Tutte le pre-condizioni sono modellate con i require all'inizio di un metodo, e tutte le post-condizioni come assert alla fine del metodo.
+	\caption{
+		Progettazione in Solidity del metodo \textbf{marry}. Esso chiama la funzione acceptMarriage sull'address dello sposo.
+		I prerequisiti sono modellati con il costrutto "require" di Solidity. If the predicate is false, then
+		the transaction will be reverted.
+		Le post-condizioni sono \textbf{assert} poichè in production non serve eseguirli, a differenza
+		dei require che servono per la corretta esecuzione del software.
+		Invece in fase di testing è utilo averlo perchè possiamo accorgerci che lo stato del sistema
+		stia entrando in una configurazione invalida.
 	}
 	\label{code:marry2}
 \end{figure}
@@ -324,12 +332,9 @@ function marry(address newSpouse) public nonReentrant {
 
 \begin{figure}[htbp]
 	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
-	\caption{In figura è mostrata la seconda iterazione della fase di analisi della Metodologia Agile. Tutto ciò che era vero
-		per il diagramma delle classi in figura \ref{uml:agile1} è vero anche per questo diagramma. È stata, però, aggiunta l'informazione
-		della taxAllowance comune del matrimonio. Essa è stata registrata durante il matrimonio e quindi quando ci si scambia la propria taxAllowance
-		non bisogna sforare la taxAllowance comune.
-		Uno sposo dovrebbe fare attenzione a quale address si sposa, poichè quell'address deve essere un effettiva instanza di Taxpayer.
-		Ci sarebbe una reentrancy se questo non fosse vero (e.g. lo sposo mente nell'interfaccia ERC-165).
+	\caption{
+		In figura è mostrata la seconda iterazione della fase di analisi della Metodologia Agile. Tutto ciò che era vero
+		per il diagramma delle classi in figura \ref{uml:agile1} è vero anche per questo diagramma.
 	}
 	\label{uml:agile2}
 \end{figure}
@@ -343,8 +348,11 @@ che la somma delle due sia uguale a alla somma delle due taxallowance al tempo d
 
 Questo introduce una necessità a salvarsi questa informazione quando avviene il matrimonio.
 
-Poichè questo vincolo non può essere espresso attraverso la sintassi di UML (e quindi di Solidity),
-nel metodo `transferAllowance` sono state aggiunte le precodinzioni affinchè il metodo rispetti il vincolo.
+Quindi, come mostrato in figura \ref{uml:agile2}
+aggiunta l'informazione della taxAllowance comune del matrimonio.
+
+Essa è stata registrata durante il matrimonio e quindi quando ci si scambia la propria taxAllowance
+non bisogna sforare la taxAllowance comune.
 
 Il vincolo può essere espresso attraverso la logica del primo ordine nel seguente modo.
 
