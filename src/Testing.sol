@@ -105,6 +105,13 @@ contract EchidnaTesting {
         return true;
     }
 
+    function echidna_reedem_check(uint256 index) internal returns (bool) {
+        Taxpayer t = taxpayers[index];
+        if (t.isReedem()) {
+            return t.age() >= 65;
+        }
+    }
+
     function echidna_reedem_taxAllowance() public view returns (bool) {
         for (uint256 index = 0; index < taxpayers.length; index++) {
             if (!check_reedem_tax_allowance(index)) {

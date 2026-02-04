@@ -328,7 +328,22 @@ Reentrency attacks non sono possibili dato che tutti i Taxpayer sono stati creat
 	}
 	\label{code:marry2}
 \end{figure}
-
+\begin{figure}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function check_spouse(uint256 index) internal view returns (bool) {
+    Taxpayer t = taxpayers[index];
+    if (t.isMarried()) {
+        return Taxpayer(t.getSpouse()).getSpouse() == address(t);
+    }
+    return true;
+}
+\end{lstlisting}
+	\caption{Progettazione in Solidity dell'invariante \ref{V_spouse}. Questa funzione è internal, quindi non verrà chiamata direttamente
+		da \textbf{Echidna}, ma esiste anche una funzione \textbf{public} che itera per ogni Taxpayer
+		istanziato dal contratto di test per verificare che questa funzione sia vera, fallisce altrimenti.}
+	\label{code:V_marry2}
+\end{figure}
 
 \begin{figure}[htbp]
 	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
@@ -361,13 +376,19 @@ Il vincolo può essere espresso attraverso la logica del primo ordine nel seguen
 	\implies a.taxAllowanceo + b.taxAllowance = \text{Tax allowance all'inizio del Matrimonio}
 \end{equation}
 
-In questo modo è stato possibile verificare che il vincolo fosse rispettato.
+\subsection{Progettazione}
+
+Come mostrato in figura \ref{code:marry2}
+la nuova implementazione del metodo marry permette di salvarsi la quantità massima di tax allowance di un intero nucleo familiare.
+
+Viene verificata la correttezza del codice è stato implementato il vincolo con echidna come mostrato in figura \ref{code:V_marry2}.
 
 \section{Esercizio 3}
 
 \begin{figure}[htbp]
 	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter3.png}}
-	\caption{Nella fase di design della metodologia Agile iterazione numero 3, è stato modellato il comportamento per il caso in cui uno Taxpayer supera i 65 anni di vita.
+	\caption{
+		Nella fase di design della metodologia Agile iterazione numero 3, è stato modellato il comportamento per il caso in cui uno Taxpayer supera i 65 anni di vita.
 		Dato che l'età di un Taxpayer è calcolabile, allora il Taxpayer deve riscattare l'aumento della taxAllowance tramite il metodo redeemTaxAllowance. Esso ha come pre-condizioni
 		quella di avere almeno 65 anni. Per un Taxpayer è di suo interesse e responsabilità quella di riscattare la taxAllowance. Nel caso il Taxpayer è sposato, allora la maxTaxAllowance deve essere aggiurnata
 		tramite il metodo redeemTaxAllowanceOfSpouse.
@@ -375,6 +396,14 @@ In questo modo è stato possibile verificare che il vincolo fosse rispettato.
 	\label{uml:agile3}
 \end{figure}
 
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/redeem.png}}
+	\caption{
+		Quando un Taxpayer viene istanziato allora lo stato del contratto è `notRedeemed`. Se un taxpayer ha almeno 65 anni allora può eseguire
+		la funzione reedemTaxAllowance e ottenere altra tax allowance. Nello stato reedimed non si può più uscire.
+	}
+	\label{uml:redeem}
+\end{figure}
 
 Con la fine del testing di echidna è finita anche la seconda iterazione del ciclo Agile.
 
@@ -383,16 +412,36 @@ Per la terza parte quindi si riparte dalla fase Model Driven di questo progetto.
 Dato che adesso l'età è calcolabile non possiamo automaticamente aumentare la taxAllowance di un individuo
 quando compie 65 anni. In più se il Taxpayer è sposato bisogna modificare la taxAllowance globale del matrimonio.
 
-Quindi è stato aggiunto un metodo chiamato `redeemTaxAllowance` % TODO: controllare
+Quindi è stato aggiunto un metodo chiamato `redeemTaxAllowance`.
 
 Un taxpayer che ha compiuto 65 anni è di suo interesse chiamare questo metodo appena compie 65 anni per poter
 ridurre la sua taxAllowance. Questo richiede una piccola fee da pagare alla blockchain quando si compiono 65 anni, ma tanto è da fare
-una sola volta.
+una sola volta nella vita.
 
-Quindi possiamo vedere il funzionamento con un automa stati finiti. % TODO: immagine
+Quindi possiamo vedere il funzionamento con un automa stati finiti come mostrato in figura \ref{uml:redeem}. % TODO: immagine
 
-Non serve aggiungere invarianti se non aggiungere le precodinzioni necessarie
-per poter chiamare il metodo `redeemTaxAllowance`.
+\section{Progettazione}
+
+\begin{figure}
+	\label{code:V_reedem}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function echidna_reedem_check(uint256 index) internal returns (bool) {
+        Taxpayer t = taxpayers[index];
+        if (t.isReedem()) {
+            return t.age() >= 65;
+        }
+    }
+  \end{lstlisting}
+\end{figure}
+
+L'invariante aggiunta è per verificare che se hai fatto il redeem allora hai almeno 65 anni come mostrato in figura \ref{code:V_reedem}.
+
+Grazie alle pre-condizioni del metodo reedemTaxAllowance allora il vincolo viene rispettato.
+
+Ovviamente se un Taxpayer aumenta la tax allowance allora bisogna aggiornare il valore comune della tax allowance con il proprio sposo.
+
+Tutti i casi sono stati controllati con un altra invariante, non inserita nel report poichè è troppo grande.
 
 \section{Esercizio 4}
 
