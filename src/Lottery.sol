@@ -15,11 +15,7 @@ using BokkyPooBahsDateTimeLibrary for uint256;
 
 interface ILottery is IERC165 {
     function startLottery() external;
-
-    function commit(bytes32 y) external;
-
-    function reveal(uint256 rev) external;
-
+    function join(address taxpayer) external;
     function endLottery() external returns (address);
 }
 
@@ -27,7 +23,6 @@ contract Lottery is ILottery, ERC165Query {
     enum State {
         NotStarted,
         Started,
-        Ending
     }
 
     event Message(string);
@@ -41,36 +36,42 @@ contract Lottery is ILottery, ERC165Query {
 
     event AssertionFailed(uint256);
 
-    mapping(bytes4 => bool) supportedInterfaces;
+    mapping(bytes4 => bool) private supportedInterfaces;
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return supportedInterfaces[interfaceId];
     }
 
     address immutable owner;
-    mapping(uint256 => mapping(address => bytes32)) public commits;
-    mapping(uint256 => mapping(address => uint256)) public reveals;
-    mapping(uint256 => address[]) public revealed;
+    mapping(uint256 => mapping(address => bool)) private joined;
+    mapping(uint256 => address[]) private listJoined;
 
-    uint256 iteration = 0;
+    uint256 private iteration = 0;
     // uint256 public startTime;
     // uint256 public revealTime;
     // uint256 public endTime;
     // uint256 public period;
 
-    State state;
+    State private state;
+
+    FactoryTaxpayer private f;
 
     // Initialize the registry with the lottery period.
-    constructor(address _owner) {
+    constructor(FactoryTaxpayer factory, address _owner) {
         // period = p;
         // startTime = 0;
         // endTime = 0;
         owner = _owner;
-
+        f = factory;
         supportedInterfaces[type(IERC165).interfaceId] = true;
         supportedInterfaces[type(ILottery).interfaceId] = true;
         state = State.NotStarted;
         iteration = 0;
+    }
+
+    // Randomness provided by this is predicatable. Use with care!
+    function randomNumber() internal view returns (uint256) {
+        return uint256(blockhash(block.number - 1));
     }
 
     //If the lottery has not started, anyone can invoke a lottery.
@@ -80,30 +81,14 @@ contract Lottery is ILottery, ERC165Query {
         state = State.Started;
     }
 
-    //A taxpayer send his own commitment.
-    function commit(bytes32 y) public {
-        // require(block.timestamp >= startTime);
+    function join(address taxpayer) public {
         require(State.Started == state);
-        require(
-            doesContractImplementInterface(msg.sender, type(ILotteryReceiver).interfaceId),
-            "the contract doen't implement ILotteryReceiver interface"
-        );
-        commits[iteration][msg.sender] = y;
-    }
 
-    function endCommit() public {
-        require(state == State.Started);
-        require(owner == msg.sender);
-        state = State.Ending;
-    }
+        require(f.isTaxpayer(taxpayer));
 
-    //A valid taxpayer who sent his own commitment, sends the revealing value.
-    function reveal(uint256 rev) public {
-        // require(block.timestamp >= revealTime);
-        require(State.Ending == state);
-        require(keccak256(abi.encode(rev)) == commits[iteration][msg.sender]);
-        revealed[iteration].push(msg.sender);
-        reveals[iteration][msg.sender] = uint256(rev);
+        require(joined[iteration][taxpayer] == false, "already joined");
+        joined[iteration][taxpayer] = false;
+        listJoined[iteration].push(taxpayer);
     }
 
     //Ends the lottery and compute the winner.
@@ -111,13 +96,9 @@ contract Lottery is ILottery, ERC165Query {
     function endLottery() public returns (address) {
         // require(block.timestamp >= endTime);
         require(owner == msg.sender);
-        require(State.Ending == state, "Not good state.");
-        require(revealed[iteration].length > 0, "No one was revealed.");
-        uint256 total = 0;
-        for (uint256 i = 0; i < revealed[iteration].length; i++) {
-            total += reveals[iteration][revealed[iteration][i]] % revealed[iteration].length;
-        }
-        address winner = revealed[iteration][total % revealed[iteration].length];
+        require(State.Started == state, "Not good state.");
+        require(listJoined[iteration].length > 0, "No one was joined.");
+        address winner = listJoined[iteration][randomNumber() % listJoined[iteration].length];
         state = State.NotStarted;
         iteration += 1;
         ILotteryReceiver(winner).winLottery();

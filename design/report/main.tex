@@ -11,6 +11,8 @@
 
 \usepackage{listings}
 
+\bibliographystyle{plain}
+
 % --- Definizione del linguaggio Solidity ---
 \lstdefinelanguage{Solidity}{
   morekeywords={
@@ -91,7 +93,8 @@
 L'obiettivo di questo progetto consiste nell'analisi, nella correzione e nella messa in sicurezza degli smart contract forniti nella traccia d'esame.
 Il lavoro si concentra sull'identificazione delle vulnerabilità presenti nel codice sorgente iniziale, verificate tramite la definizione e il controllo delle invarianti descritte nelle specifiche.
 
-La fase di analisi è stata condotta seguendo un approccio \textit{Model Driven}, basato su UML (\textit{Unified Modeling Language}), un formalismo particolarmente adatto per la modellazione di sistemi complessi come quelli basati su Solidity.
+La fase di analisi è stata condotta seguendo un approccio \textit{Model Driven}, basato su UML (\textit{Unified Modeling Language}), un formalismo particolarmente adatto per la modellazione di sistemi complessi
+come quelli basati su Solidity.
 
 \section{Refactoring e Pulizia del Codice}
 
@@ -116,9 +119,7 @@ Grazie ad esso è possibile formattare il codice solidity e utilizzare un linter
 
 Oltre alle problematiche sintattiche, il codice presentava vulnerabilità logiche significative. Queste sono state individuate grazie all'approccio \textit{Model Driven}.
 
-L'utilizzo di diagrammi delle classi UML permette una traduzione naturale verso il codice Solidity. In letteratura sono proposti diversi meta-modelli per facilitare questa transizione.
-
-% TODO: Inserire qui il riferimento alla figura: \begin{figure} ... \end{figure}
+L'utilizzo di diagrammi delle classi UML permette una traduzione naturale verso il codice Solidity. In letteratura \cite{jurgelaitis2022} sono proposti diversi meta-modelli per facilitare questa transizione.
 
 Il diagramma delle classi UML definisce i vincoli del sistema sotto forma di invarianti, le quali devono rimanere vere durante l'intera esecuzione delle transazioni.
 
@@ -135,15 +136,18 @@ ma adesso l'età è calcolabile.
 
 Non è l'unico attributo diventato calcolabile, per esempio isMarried è stata resa una funzione.
 
-\subsection{ERC-165}
+\subsection{Factory Taxpayer}
 
-Un altra criticità del codice fornito è il metodo \textbf{isContract}. Esso serve per verificare che un address in input è uno smart contract oppure no, ma questa implementazione non è standard nell'ecosistema Ethereum.
+Un altra criticità del codice fornito è il metodo \textbf{isContract}. Esso serve per verificare che un address in input è uno smart contract oppure no,
+ma questa implementazione non assicurara dato che uno smart contract malevolo potrebbe avere questo attributo, mentendo sul fatto di quali functioni esso implementa.
+Questo potrebbe portare a reentrency attacks.
 
-Quindi è stato implementato ERC-165 % TODO: riferimento
-che serve per effettuare delle query allo smart contract per capire quali metodi implementa.
+Questo può essere risolto creando una classe \textbf{FactoryTaxpayer} gestita dallo stato. Essa ha un owner che permette di istanziare taxpayer. Essi li registra in un loro mapping interno.
 
-Questo standard però non da garanzie sulla sicurezza, dato che uno smart contract può mentire su quali metodi implementa, ma è un modo miglire e standardizzato
-per controllare se l'address in input è uno smart contract.
+Il riferimento a questo contratto è salvato nelle istanze dei taxpayer, i taxpayer possono fare query alla factory per verificare che un certo constratto sia un Taxpayer
+affidabile.
+
+Questo garantisce sicurezza assumendo che l'owner della Factory non sia compromesso.
 
 \subsection{Fuzzy Testing}
 Per la verifica della correttezza del software, anziché procedere con una verifica formale matematica completa, si è optato per il \textbf{Fuzz Testing}.
@@ -205,9 +209,9 @@ non proverà ad istanziare il contratto più volte per verificare che l'invarian
 
 Quindi va trovata una soluzione differente.
 
-\textbf{Echidna} ha la possibilià di definire le sui configurazioni interne dentro un file \text{yaml} % TODO: verificare che  si chiamano cosi questi file
+\textbf{Echidna} ha la possibilià di definire le sui configurazioni interne dentro un file \text{yaml}
 , un flag che può essere attivato è \textbf{allContracts} che se definito \textbf{true} allora \textbf{Echidna} farà fuzzy tesing non solo
-sul contratto di riferimento, ma anche su tutti i contratti che il contratto di riferimento ha istanziato. % TODO: aggiungere reference alla documentazione
+sul contratto di riferimento, ma anche su tutti i contratti che il contratto di riferimento ha istanziato.
 
 Quindi un altra soluzione possibile è quella di scrivere un nuovo contratto, chiamato \textbf{EchidnaTesting} dove nel suo costruttore
 istanzia vari oggetti della classe \textbf{Taxpayer} e lo aggiunge in un array di Taxpayers.
@@ -220,7 +224,7 @@ Così \textbf{Echidna} proverà a sposare diverse compinazioni di questi 8 Taxpa
 
 Inoltre bisogna evitare le reentrancy. Dato che un contratto malevolo potrebbe implementare l'ERC-165, ma mentire su quali interfaccie implementa.
 
-Quindi per ovviare questo problema OpenZeepeling ha a disposizione
+Quindi per ovviare questo problema OpenZeppeling ha a disposizione
 
 \begin{figure}
 	\centering
@@ -264,9 +268,10 @@ function marry(address newSpouse) public nonReentrant {
         marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
     }
 \end{lstlisting}
-	\caption{Progettazione in Solidity del metodo \textbf{marry}. Esso chiama la funzione acceptMarriage sull'address dello sposo.
+	\caption{
+		Progettazione in Solidity del metodo \textbf{marry}. Esso chiama la funzione acceptMarriage sull'address dello sposo.
 		Così atomicamente il metodo \textbf{marry} sposa due taxpayer mantenendo le invarianti del modello UML vere prima e dopo l'esecuzione.
-		Chiaramente se lo sposo non implementa l'interfaccia ITaxpayer, allora sarebbe possibile un reentrancy attack. Possiamo evitarlo con la libreria di utilities OpenZeepeling % TODO: è sbagliato
+		Chiaramente se lo sposo non implementa l'interfaccia ITaxpayer, allora sarebbe possibile un reentrancy attack. Possiamo evitarlo con la libreria di utilities OpenZeppeling
 		che offre il costrutto nonReerancy. Tutte le pre-condizioni sono modellate con i require all'inizio di un metodo, e tutte le post-condizioni come assert alla fine del metodo.
 	}
 	\label{code:marry}
@@ -310,7 +315,7 @@ function marry(address newSpouse) public nonReentrant {
 \end{lstlisting}
 	\caption{Progettazione in Solidity del metodo \textbf{marry}. Esso chiama la funzione acceptMarriage sull'address dello sposo.
 		Così atomicamente il metodo \textbf{marry} sposa due taxpayer mantenendo le invarianti del modello UML vere prima e dopo l'esecuzione.
-		Chiaramente se lo sposo non implementa l'interfaccia ITaxpayer, allora sarebbe possibile un reentrancy attack. Possiamo evitarlo con la libreria di utilities OpenZeepeling % TODO: è sbagliato
+		Chiaramente se lo sposo non implementa l'interfaccia ITaxpayer, allora sarebbe possibile un reentrancy attack. Possiamo evitarlo con la libreria di utilities OpenZeppeling % TODO: è sbagliato
 		che offre il costrutto nonReerancy. Tutte le pre-condizioni sono modellate con i require all'inizio di un metodo, e tutte le post-condizioni come assert alla fine del metodo.
 	}
 	\label{code:marry2}
@@ -418,5 +423,7 @@ possono rivelare i loro valori. Questo comportamento viene mostrato nella figura
 Questo migliora l'information flow della lotteria, rendendo più difficile per i taxpayer barare.
 
 \subsection{Progettazione}
+
+\bibliography{bibliography}
 
 \end{document}

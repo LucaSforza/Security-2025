@@ -18,8 +18,7 @@ import "./FactoryTaxpayer.sol";
 using BokkyPooBahsDateTimeLibrary for uint256;
 
 interface ILotteryReceiver {
-    function joinLottery(address lot, uint256 r) external;
-    function revealLottery() external;
+    function joinLottery() external;
     function winLottery() external;
     function getWins() external returns (uint256);
 }
@@ -177,8 +176,8 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         require(newSpouse != address(0));
         require(!isMarried(), "Already married");
         require(newSpouse != address(this), "Cannot marry self");
-
-        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "must marry a Taxpayer");
+        require(f.isTaxpayer(newSpouse), "the new spouse is not a registered taxpayer");
+        // require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId), "must marry a Taxpayer");
 
         marriage.spouse = newSpouse;
         marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
@@ -257,13 +256,13 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         uint256 currentMonth = ts.getMonth();
         uint256 currentDay = ts.getDay();
 
-        uint256 age = currentYear - birth.year;
+        uint256 _age = currentYear - birth.year;
 
         if (currentMonth < birth.month || (currentMonth == birth.month && currentDay < birth.day)) {
-            age -= 1;
+            _age -= 1;
         }
 
-        return age;
+        return _age;
     }
 
     // TODO: Dire nella relazione che queste pre-condizioni devono essere vero
@@ -286,33 +285,17 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         return taxAllowance;
     }
 
-    address joinedLottery;
-
-    function joinLottery(address lot, uint256 r) public {
-        // What if we joing more than one lottery?
-        require(rev == 0, "cannot join more than one lottery");
-        require(doesContractImplementInterface(lot, type(ILottery).interfaceId), "lot is not a lottery");
-        require(FactoryTaxpayer(f).isLottery(lot));
-        Lottery l = Lottery(lot);
-        l.commit(keccak256(abi.encode(r)));
-        rev = r;
-        joinedLottery = lot;
+    function joinLottery() public {
+        Lottery l = Lottery(f.getLottery());
+        l.join(address(this));
     }
 
-    function revealLottery() public {
-        Lottery l = Lottery(joinedLottery);
-        l.reveal(rev);
-        rev = 0; // TODO: dire nella relazione che questo parametro non è sicuro, dato che qualsiasi persona può leggere l'attributo rev anche se è private
-        // ma per motivi di testing è stato lasciato, ma in production va levato.
-    }
-
-    uint256 wins;
+    uint256 private wins;
 
     function winLottery() external {
-        require(msg.sender == joinedLottery);
+        require(msg.sender == f.getLottery());
         taxAllowance += 2000;
         wins += 1;
-        joinedLottery = address(0);
         if (isMarried()) {
             marriage.maxAllowance += 2000; // (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
             ITaxpayer(ITaxpayer(address(this)).getSpouse()).redeemTaxAllowanceOfSpouse(2000);

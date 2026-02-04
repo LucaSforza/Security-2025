@@ -21,12 +21,12 @@ contract EchidnaTesting {
     }
 
     function addTaxpayer() internal {
-        address t = f.creareTaxpayer(address(0), address(0), 28, 5, 2003);
+        address t = f.createTaxpayer(address(0), address(0), 28, 5, 2003);
         taxpayers.push(Taxpayer(t));
     }
 
     function addOldTaxpayer() internal {
-        address t = f.creareTaxpayer(address(0), address(0), 28, 5, 1950);
+        address t = f.createTaxpayer(address(0), address(0), 28, 5, 1950);
         taxpayers.push(Taxpayer(t));
     }
 

@@ -5,7 +5,7 @@ contract FactoryTaxpayer {
     address immutable owner;
 
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "you are not the owner");
         _;
     }
     mapping(address => bool) private taxpayers;
@@ -13,10 +13,10 @@ contract FactoryTaxpayer {
 
     constructor(address _owner) {
         owner = _owner;
-        l = new Lottery(_owner);
+        l = new Lottery(this, _owner);
     }
 
-    function creareTaxpayer(address p1, address p2, uint8 day, uint8 month, uint16 year)
+    function createTaxpayer(address p1, address p2, uint8 day, uint8 month, uint16 year)
         public
         onlyOwner
         returns (address)

@@ -12,11 +12,13 @@ contract EchidnaTesting {
     Taxpayer[] taxpayers;
     mapping(address => uint256) wins;
     Lottery lottery;
-    FactoryTaxpayer f;
+    FactoryTaxpayer private f;
     uint256 total_ends;
 
+    event Message(bytes);
+
     constructor() {
-        f = FactoryTaxpayer(address(this));
+        f = new FactoryTaxpayer(address(this));
         addTaxpayer();
         addTaxpayer();
         addTaxpayer();
@@ -59,18 +61,13 @@ contract EchidnaTesting {
     }
 
     function addTaxpayer() internal {
-        address t = f.creareTaxpayer(address(0), address(0), 28, 5, 2003);
+        address t = f.createTaxpayer(address(0), address(0), 28, 5, 2003);
         taxpayers.push(Taxpayer(t));
     }
 
     function addOldTaxpayer() internal {
-        address t = f.creareTaxpayer(address(0), address(0), 28, 5, 1950);
+        address t = f.createTaxpayer(address(0), address(0), 28, 5, 1950);
         taxpayers.push(Taxpayer(t));
-    }
-
-    function getRandomNumber(uint256 seed) internal view returns (uint256) {
-        uint256 randomHash = uint256(keccak256(abi.encodePacked(block.prevrandao, block.timestamp, msg.sender, seed)));
-        return randomHash;
     }
 
     event Message(string);
@@ -91,18 +88,8 @@ contract EchidnaTesting {
     function joinAll() internal {
         // Pre-condizione: lotteria creata
         for (uint256 index = 0; index < taxpayers.length; index++) {
-            taxpayers[index].joinLottery(address(lottery), getRandomNumber(index));
+            taxpayers[index].joinLottery();
         }
-    }
-
-    function revealAll() internal {
-        for (uint256 index = 0; index < taxpayers.length; index++) {
-            taxpayers[index].revealLottery();
-        }
-    }
-
-    function endCommit() internal {
-        lottery.endCommit();
     }
 
     function endLottery() internal {
@@ -129,9 +116,9 @@ contract EchidnaTesting {
 
     function complete_iteration() public {
         create_lottery();
+
         joinAll();
-        endCommit();
-        revealAll();
+
         endLottery();
     }
 
@@ -140,7 +127,7 @@ contract EchidnaTesting {
         (address maxAddress, uint256 maxValue) = getMaxWins();
 
         if (wins[address(0)] > 0) return false;
-        if (total_ends < 4) return true;
+        if (total_ends < 5) return true;
         return maxValue - minValue < 25;
     }
 }
