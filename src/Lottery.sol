@@ -70,9 +70,7 @@ contract Lottery is ILottery, ERC165Query {
     }
 
     // Randomness provided by this is predicatable. Use with care!
-    function randomNumber() internal view returns (uint256) {
-        return uint256(blockhash(block.number - 1));
-    }
+    
 
     //If the lottery has not started, anyone can invoke a lottery.
     function startLottery() public {
@@ -91,12 +89,22 @@ contract Lottery is ILottery, ERC165Query {
         listJoined[iteration].push(taxpayer);
     }
 
-    //Ends the lottery and compute the winner.
-    // returns the address of the winner
-    function endLottery() public returns (address) {
-        // require(block.timestamp >= endTime);
+    function endLottery() public {
+      require(owner == msg.sender);
+      require(State.Started == state, "Not good state.");
+      require(listJoined[iteration].length > 0, "No one was joined.");
+
+      state = State.Ending;
+      futureBlock = block.number;
+    }
+    
+    function randomNumber() internal view returns (uint256) {
+        return uint256(blockhash(block.number));
+    }
+    
+    function selectWinner() public returns (address) {
         require(owner == msg.sender);
-        require(State.Started == state, "Not good state.");
+        require(State.Ending == state, "Not good state.");
         require(listJoined[iteration].length > 0, "No one was joined.");
         address winner = listJoined[iteration][randomNumber() % listJoined[iteration].length];
         state = State.NotStarted;

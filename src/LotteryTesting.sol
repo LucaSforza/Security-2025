@@ -120,6 +120,8 @@ contract EchidnaTesting {
         joinAll();
 
         endLottery();
+        wait(1 weeks);
+        selectWinner();
     }
 
     function echidna_check_lottery() public view returns (bool) {

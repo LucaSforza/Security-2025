@@ -355,8 +355,7 @@ function check_spouse(uint256 index) internal view returns (bool) {
 \end{figure}
 
 Concluso l'esercizio 1 si è anche conclusa la prima iterazione della metodologia Agile, quindi è stato modificato l'UML
-per modellare le specifiche dell'esercizio 2. % TODO: aggiungere UML
-% TODO: spiegare prima la metodologia agile
+per modellare le specifiche dell'esercizio 2.
 
 Con le nuove specifiche deve essere possibile spostare la tax allowance da uno sposo ad un altro, però vincolando
 che la somma delle due sia uguale a alla somma delle due taxallowance al tempo dl matrimonio.
@@ -382,6 +381,8 @@ Come mostrato in figura \ref{code:marry2}
 la nuova implementazione del metodo marry permette di salvarsi la quantità massima di tax allowance di un intero nucleo familiare.
 
 Viene verificata la correttezza del codice è stato implementato il vincolo con echidna come mostrato in figura \ref{code:V_marry2}.
+
+% TODO: add image
 
 \section{Esercizio 3}
 
@@ -443,6 +444,8 @@ Ovviamente se un Taxpayer aumenta la tax allowance allora bisogna aggiornare il 
 
 Tutti i casi sono stati controllati con un altra invariante, non inserita nel report poichè è troppo grande.
 
+% TODO: add image
+
 \section{Esercizio 4}
 
 \subsection{Analisi}
@@ -455,31 +458,88 @@ Tutti i casi sono stati controllati con un altra invariante, non inserita nel re
 
 \begin{figure}[htbp]
 	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/lottery.png}}
-	\caption{UML State Diagram of the Lottery.}
+	\caption{UML State Diagram of the Lottery. Nella fase nonStarded nessuno può entrare nella lotteria finchè non viene attivata. Nello stato started i Taxpayer
+		possono entrare nella lotteria. Quando la macchina a stati finiti entra nello stato ending allora viene salvato il valore di un blocco futuro. Se quel blocco è arrivato,
+		allora è possibile estrarre il vincitore usando l'hash del blocco in cui è stata fatta la transazione.
+	}
 	\label{uml:lottery}
 \end{figure}
 
-Nella fase di design della metodolia Agile iterazione numero 4, è stata aggiunta la modellazione della Lotteria.
-Una lotteria deve implementare lo standard ERC165, in più deve
-implementare i seguenti metodi: startLottery, commit, endCommit, reveal, endLottery.
+Nella fase di design della metodolia Agile iterazione numero 4, è stata aggiunta la modellazione della Lotteria, come mostrato in figura \ref{uml:agile4}.
+Una lotteria deve implementare i seguenti metodi: startLottery, join, endLottery, selectWinner.
+
+Anche la lotteria ha un owner, che è lo stesso di FactoryTaxpayer.
+
+Lui, essendo il trusted party, può decidere quando far finire, oppure iniziare la lottereia.
+
+Tutti i riferimenti al tempo sono stati rimossi, poichè i validator nella blockchain di Ethereum potrebbero
+controllare quel valore, quindi deve essere responsabilità del trusted party assicurare che avvengano dopo un determinato
+periodo di tempo, usando l'orologio non della blockchain, ma reale.
 
 È stata migliorata l'implementazione in modo che la lotteria non sia "usa e getta", ma invece può essere
-reiniziata quante volte si vuole.
-
-Istanziare uno smart contract può essere molto costoso, quindi rendere una lotteria riusabile è un ottimo
-modo per risparmiare gas.
+reiniziata quante volte si vuole, questo è più gas efficient rispetto a instanziare un nuovo contratto ogni volta.
 
 È stato implementato il design pattern di una macchina a stati finiti.
 Ogni fase è rappresentata da uno stato, dove in un certo stato è possibile fare solo determinate operazioni.
 
-L'owner della lotteria decide in quale stato si deve trovare la lotteria.
+È stato ampliamente modificato il codice della lotteria poichè aveva una limitazione molto importante.
 
-Nella fase `started` i Taxpayer possono fare i loro commit e solo nella fase di `endLottery`
-possono rivelare i loro valori. Questo comportamento viene mostrato nella figura \ref{uml:lottery}. In più ogni lotteria interagisce solo con l'interfaccia ILotteryReceiver, quindi i Taxpayer devono implentare questa interfaccia.
+La "casualità" veniva gestita dai Taxpayer quando fanno i loro commit alla lotteria, ma l'input di un utente non può
+essere fidato.
+
+La blockchain di Ethereum è stata progettata per risolvere questo problema ed avere un sistema molto più affidabile per gestire la casualità.
+
+Quando finisce la lotteria allora non viene decretato subito un vincitore, ma viene salvato in un attributo il numero del blocco dove
+è stata inserita la transazione sommata ad una costante definibile.
+
+Quindi i Taxpayer dovrebbero convincere una buona fetta del network di Ethereum per creare blocchi che abbiano un certo hash
+per invalidare la lotteria, cosa che è poco realistica.
+
+
+Il comportamento viene mostrato nella figura \ref{uml:lottery}.
 
 Questo migliora l'information flow della lotteria, rendendo più difficile per i taxpayer barare.
 
 \subsection{Progettazione}
+
+\begin{figure}
+	\label{code:V_lottery}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function complete_iteration() public {
+        create_lottery();
+        joinAll();
+        endLottery();
+        wait(1 weeks); // NOTE: this make time pass one week
+        selectWinner();
+    }
+
+    function echidna_check_lottery() public view returns (bool) {
+        (address minAddress, uint256 minValue) = getMinWins();
+        (address maxAddress, uint256 maxValue) = getMaxWins();
+
+        if (wins[address(0)] > 0) return false;
+        if (total_ends < 5) return true;
+        return maxValue - minValue < 25;
+    }
+  \end{lstlisting}
+	\caption{getMinWins da il valore di vincite più piccolo della distribuzione, mentre getMaxWins invece il più grande. Così vincolando che dopo
+		tanti turni la varianza deve essere in un certo range.}
+\end{figure}
+
+
+Per vincolare che la lotteria funzioni correttamente bisogna aggiungere il vincolo
+che la varianza delle partite vinte da ogni taxpayer che partecipa deve essere in un certo range.
+
+Il funzionamento è mostrato in figura 11.% \ref{code:V_lottery}.
+
+È stato creato un nuovo contratto di Test diverso da quello precedente. Adesso il flag allContract è false.
+
+Quindi echidna è costretto a chiamare i metodi public solo del contratto di test.
+
+L'unica funzione public è quella che permette ad echidna di fare un intero round di test.
+
+% TODO: add screenshot
 
 \bibliography{bibliography}
 
