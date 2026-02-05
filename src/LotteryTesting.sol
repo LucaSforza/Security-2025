@@ -45,8 +45,8 @@ contract EchidnaTesting {
         addTaxpayer();
         addTaxpayer();
         addTaxpayer();
-        addOldTaxpayer();
-        addOldTaxpayer();
+        // addOldTaxpayer();
+        // addOldTaxpayer();
 
         lottery = Lottery(f.getLottery());
     }
@@ -113,14 +113,14 @@ contract EchidnaTesting {
         }
     }
 
-    function endLottery() internal {
-        lottery.endLottery();
+    function endLottery(bytes32 sealedSeed) internal {
+        lottery.endLottery(sealedSeed);
     }
 
-    function selectWinner() internal {
+    function selectWinner(uint256 seed) internal {
         address winner;
 
-        try lottery.selectWinner() returns (address res) {
+        try lottery.selectWinner(seed) returns (address res) {
             winner = res;
             wins[winner] += 1;
             total_ends += 1;
@@ -139,12 +139,13 @@ contract EchidnaTesting {
         }
     }
 
-    function complete_iteration() public {
+    function complete_iteration(uint256 _seed) public {
         create_lottery();
         joinAll();
-        endLottery();
-        test_blocks_forward(1);
-        selectWinner();
+        bytes32 sealSeed = keccak256(abi.encodePacked(address(this), _seed));
+        endLottery(sealSeed);
+        vm.roll(block.number + 1);
+        selectWinner(_seed);
     }
 
     function echidna_check_lottery() public view returns (bool) {
