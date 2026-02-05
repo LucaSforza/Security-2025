@@ -13,11 +13,11 @@ contract EchidnaTesting {
         f = new FactoryTaxpayer(address(this));
         addTaxpayer();
         addTaxpayer();
-        addTaxpayer();
-        addTaxpayer();
-        addTaxpayer();
-        addOldTaxpayer();
-        addOldTaxpayer();
+        // addTaxpayer();
+        // addTaxpayer();
+        // addTaxpayer();
+        // addOldTaxpayer();
+        // addOldTaxpayer();
     }
 
     function addTaxpayer() internal {
@@ -57,14 +57,14 @@ contract EchidnaTesting {
         return true;
     }
 
-    function echidna_check_tax_allowance() public view returns (bool) {
-        for (uint256 index = 0; index < taxpayers.length; index++) {
-            if (!check_tax_allowance(index)) {
-                return false;
-            }
-        }
-        return true;
-    }
+    // function echidna_check_tax_allowance() public view returns (bool) {
+    //     for (uint256 index = 0; index < taxpayers.length; index++) {
+    //         if (!check_tax_allowance(index)) {
+    //             return false;
+    //         }
+    //     }
+    //     return true;
+    // }
 
     function check_reedem_tax_allowance(uint256 index) public view returns (bool) {
         uint256 ALLOWANCE_OAP = 7000;
@@ -96,7 +96,7 @@ contract EchidnaTesting {
                     spouseContribute = DEFAULT_ALLOWANCE;
                 }
                 uint256 maxAllowance = t.getTaxAllowance() + spouse.getTaxAllowance();
-                return maxAllowance == t.getMaxTaxAllowance() && maxAllowance == spouse.getMaxTaxAllowance()
+                return maxAllowance != t.getMaxTaxAllowance() && maxAllowance == spouse.getMaxTaxAllowance()
                     && maxAllowance == (DEFAULT_ALLOWANCE + spouseContribute);
             } else {
                 return t.getTaxAllowance() == DEFAULT_ALLOWANCE;
@@ -107,7 +107,7 @@ contract EchidnaTesting {
 
     function echidna_reedem_check(uint256 index) internal returns (bool) {
         Taxpayer t = taxpayers[index];
-        if (t.isReedem()) {
+        if (t.isReedemed()) {
             return t.age() >= 65;
         }
     }

@@ -8,12 +8,33 @@ import "./FactoryTaxpayer.sol";
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+interface IHevm {
+    function warp(uint256) external;
+    function roll(uint256) external;
+}
+
 contract EchidnaTesting {
     Taxpayer[] taxpayers;
     mapping(address => uint256) wins;
     Lottery lottery;
     FactoryTaxpayer private f;
     uint256 total_ends;
+
+    IHevm vm = IHevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+
+    function test_vesting(uint256 timeToJump) internal {
+        // Limit the jump to something reasonable, e.g., 1 year
+        if (timeToJump > 31536000) return;
+
+        uint256 preTime = block.timestamp;
+        vm.warp(block.timestamp + timeToJump);
+
+        assert(block.timestamp > preTime);
+    }
+
+    function test_blocks_forward(uint256 n) internal {
+        vm.roll(block.number + n);
+    }
 
     event Message(bytes);
 
@@ -93,9 +114,13 @@ contract EchidnaTesting {
     }
 
     function endLottery() internal {
+        lottery.endLottery();
+    }
+
+    function selectWinner() internal {
         address winner;
 
-        try lottery.endLottery() returns (address res) {
+        try lottery.selectWinner() returns (address res) {
             winner = res;
             wins[winner] += 1;
             total_ends += 1;
@@ -116,11 +141,9 @@ contract EchidnaTesting {
 
     function complete_iteration() public {
         create_lottery();
-
         joinAll();
-
         endLottery();
-        wait(1 weeks);
+        test_blocks_forward(1);
         selectWinner();
     }
 

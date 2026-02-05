@@ -16,13 +16,15 @@ using BokkyPooBahsDateTimeLibrary for uint256;
 interface ILottery is IERC165 {
     function startLottery() external;
     function join(address taxpayer) external;
-    function endLottery() external returns (address);
+    function endLottery() external;
+    function selectWinner() external returns (address);
 }
 
 contract Lottery is ILottery, ERC165Query {
     enum State {
         NotStarted,
-        Started,
+        Ending,
+        Started
     }
 
     event Message(string);
@@ -70,7 +72,6 @@ contract Lottery is ILottery, ERC165Query {
     }
 
     // Randomness provided by this is predicatable. Use with care!
-    
 
     //If the lottery has not started, anyone can invoke a lottery.
     function startLottery() public {
@@ -89,23 +90,26 @@ contract Lottery is ILottery, ERC165Query {
         listJoined[iteration].push(taxpayer);
     }
 
-    function endLottery() public {
-      require(owner == msg.sender);
-      require(State.Started == state, "Not good state.");
-      require(listJoined[iteration].length > 0, "No one was joined.");
+    uint256 futureBlock;
 
-      state = State.Ending;
-      futureBlock = block.number;
+    function endLottery() public {
+        require(owner == msg.sender);
+        require(State.Started == state, "Not good state.");
+        require(listJoined[iteration].length > 0, "No one was joined.");
+
+        state = State.Ending;
+        futureBlock = block.number;
     }
-    
+
     function randomNumber() internal view returns (uint256) {
         return uint256(blockhash(block.number));
     }
-    
+
     function selectWinner() public returns (address) {
         require(owner == msg.sender);
         require(State.Ending == state, "Not good state.");
         require(listJoined[iteration].length > 0, "No one was joined.");
+        require(block.number >= futureBlock);
         address winner = listJoined[iteration][randomNumber() % listJoined[iteration].length];
         state = State.NotStarted;
         iteration += 1;
