@@ -1,0 +1,600 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\usepackage{listings}
+
+\bibliographystyle{plain}
+
+% --- Solidity Language Definition ---
+\lstdefinelanguage{Solidity}{
+  morekeywords={
+    pragma, solidity, contract, library, interface, struct, event, modifier, function, returns,
+    if, else, for, while, do, break, continue, return, emit, revert, require, assert,
+    mapping, memory, storage, calldata, public, private, internal, external, view, pure, payable,
+    address, bool, string, bytes, uint, uint8, uint16, uint32, uint64, uint128, uint256,
+    int, int8, int16, int32, int64, int128, int256,
+    new, delete, this, super, msg, block, tx
+  },
+  sensitive=true,
+  morecomment=[l]{//},      % Single-line comments
+  morecomment=[s]{/*}{*/}, % Multi-line comments
+  morestring=[b]",          % Strings in double quotes
+  morestring=[b]'           % Strings in single quotes
+}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+% --- Doom One Light Color Definitions ---
+% (Add this to your preamble)
+\definecolor{doomBack}{RGB}{250, 250, 250}      % #fafafa
+\definecolor{doomComment}{RGB}{156, 156, 156}   % #9c9c9c
+\definecolor{doomKeyword}{RGB}{198, 120, 221}   % #c678dd (Purple/Magenta)
+\definecolor{doomString}{RGB}{152, 195, 121}    % #98c379 (Green)
+\definecolor{doomNumber}{RGB}{209, 154, 102}    % #d19a66 (Orange)
+\definecolor{doomDefault}{RGB}{77, 77, 77}      % #4d4d4d (Default Text)
+% Setup section. -----------------------------------|
+
+
+\lstdefinestyle{soliditystyle}{
+  language=Solidity,
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{doomBack}, 
+  commentstyle=\color{doomComment},
+  keywordstyle=\color{doomKeyword},
+  numberstyle=\tiny\color{doomNumber},
+  stringstyle=\color{doomString},
+  basicstyle=\ttfamily\footnotesize\color{doomDefault},
+  breakatwhitespace=false,          
+  breaklines=true,                  
+  captionpos=b,                     
+  keepspaces=true,                  
+  numbers=left,                     
+  numbersep=8pt,                   
+  showspaces=false,                
+  showstringspaces=false,
+  showtabs=false,                   
+  tabsize=2
+}
+
+
+
+\begin{document}
+
+\title{Security and Software Application Project Report}
+
+\author{\IEEEauthorblockN{Luca Sforza}
+	\IEEEauthorblockA{\textit{Sapienza Università di Roma} \\
+		sforza.2050030@studenti.uniroma1.it}
+}
+
+\maketitle
+
+\begin{abstract}
+	This paper illustrates the work performed for the exam project of the Security and Software Application course at Sapienza University of Rome.
+	The main objective concerns the analysis and correction of vulnerabilities in Solidity smart contracts provided in the project specifications.
+	The Agile methodology was adopted for development, dividing the work into incremental iterations to ensure constant control over code quality and system security invariants.
+\end{abstract}
+
+\section{Introduction}
+
+The goal of this project consists of the analysis, correction, and securing of the smart contracts provided in the exam track.
+The work focuses on identifying vulnerabilities present in the initial source code, verified through the definition and checking of the invariants described in the specifications.
+
+The analysis phase was conducted following a \textit{Model Driven} approach, based on UML (\textit{Unified Modeling Language}), a formalism particularly suitable for modeling complex systems like those based on Solidity.
+
+\section{Refactoring and Code Cleaning}
+
+The initially provided code presented numerous structural and stylistic criticalities.
+In particular, attribute visibility was set to the default value (often unintentionally) and indentation did not follow any recognized formatting standard.
+
+To systematically identify and resolve these issues, static analysis tools (linters) were used.
+
+\subsection{Development Environment}
+
+For this project, the \textbf{Foundry} development framework was used, which provides a suite of essential tools for smart contract security and testing:
+
+\begin{itemize}
+	\item \textbf{Forge}: Used to compile, test, and deploy contracts.
+	\item \textbf{Anvil}: A local Ethereum node for rapid testing.
+	\item \textbf{Cast}: A tool for interacting with the contract via the command line.
+\end{itemize}
+
+Thanks to this framework, it is possible to format the Solidity code and use a linter to identify further errors.
+
+\subsection{Analysis of Logical Problems}
+
+Beyond syntactic issues, the code presented significant logical vulnerabilities. These were identified thanks to the \textit{Model Driven} approach.
+
+The use of UML class diagrams allows for a natural translation into Solidity code. Literature proposes several meta-models to facilitate this transition.
+
+The UML class diagram defines system constraints in the form of invariants, which must remain true during the entire execution of transactions.
+
+A critical example encountered concerns the management of the taxpayer's age. Initially, this was stored as an integer to be manually incremented every year.
+Such an approach is prone to errors and misalignments and is not gas-efficient.
+
+Instead, age would be calculable if we saved the date of birth. Here a problem arises because Ethereum blockchain blocks use the UNIX timestamp, so Zero is 1970; thus, it is not possible to represent Taxpayers over 65.
+
+Therefore, the approach used is to save the date (day, month, year), and the age is calculated via an approximation for leap year management.
+
+A block's timestamp is converted into a date using an external dependency, \texttt{BokkyPooBahsDateTimeLibrary}. This increases the TCB (Trusted Code Base), but now the age is calculable.
+
+This is not the only attribute that became calculable; for example, \texttt{isMarried} was made into a function.
+
+\subsection{Taxpayer Factory}
+
+Another criticality of the provided code is the \textbf{isContract} method. It serves to verify if an input address is a smart contract or not,
+but this implementation does not ensure that a given smart contract has implemented the Taxpayer interface methods.
+Therefore, a malicious contract could have this attribute, lying about which functions it implements.
+Formally, any smart contract could potentially bring the system state into an invalid configuration using reentrancy attacks.
+
+This can be resolved by creating a state-managed \textbf{FactoryTaxpayer} class. It has an owner that allows for instantiating taxpayers.
+It registers them in its internal mapping.
+
+The reference to this contract is saved in the taxpayer instances; taxpayers can query the factory to verify that a certain contract is a reliable Taxpayer using the method.
+
+This guarantees security assuming the Factory owner is not compromised.
+
+\section{Implementation of Constraints: Exercise 1}
+
+\subsection{Analysis}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter1.png}}
+	\caption{
+		UML class model of Agile iteration 1.
+	}
+	\label{uml:agile1}
+\end{figure}
+
+The first exercise requires the implementation of the marital reciprocity constraint ("spouse").
+
+Figure \ref{uml:agile1} depicts the UML modeling of the system.
+It defines the system invariant, which can be mostly constrained via Solidity language syntax.
+In addition to the constraints imposed by the class diagram, external constraints exist.
+
+The defined methods must atomically maintain the invariant during system iteration. They modify the system state and
+must not bring the state into an invalid configuration.
+Therefore, pre-conditions must be added to the methods to allow execution.
+
+UML describes the system divided into two parts.
+The part for interfacing with lotteries (which for the first iteration of the Agile methodology was ignored for now).
+And a part for interfacing with Taxpayer.
+
+Formally, the following first-order logic formula must be verified:
+
+\begin{equation}
+	\label{V_spouse}
+	\forall a \in \text{Taxpayer}, \forall b \in \text{Taxpayer}: \text{spouse}(a,b) \implies \text{spouse}(b,a)
+\end{equation}
+
+If a taxpayer $a$ is registered as the spouse of $b$, then $b$ must necessarily have $a$ registered as their spouse.
+
+If Taxpayer $A$ executes the \texttt{marry} method towards $B$, the contract must also force the update
+of $B$'s state towards $A$ within the same transaction. This scenario generates a potential infinite recursion
+if $B$ attempted to call \texttt{marry} back on $A$.
+
+\subsection{Implementation}
+
+The implemented solution involves introducing a new method called by the \texttt{marry} function,
+and the pre-condition is that the marrying taxpayer is the caller of the \texttt{acceptMarriage} function.
+
+The external constraints described in the diagram are guaranteed by the implementation of the `marry` method, where it atomically
+marries two Taxpayers, rather than trivially being a setter.
+
+The correctness of this implementation was validated using \textbf{Echidna} for fuzzing.
+
+\begin{figure}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function check_spouse(uint256 index) internal view returns (bool) {
+    Taxpayer t = taxpayers[index];
+    if (t.isMarried()) {
+        return Taxpayer(t.getSpouse()).getSpouse() == address(t);
+    }
+    return true;
+}
+\end{lstlisting}
+	\caption{Solidity design of invariant \ref{V_spouse}. This function is internal, so it will not be called directly
+		by \textbf{Echidna}, but there is also a \textbf{public} function that iterates for each Taxpayer
+		instantiated by the test contract to verify that this function is true; otherwise, it fails.}
+	\label{code:V_spouse}
+\end{figure}
+
+\begin{figure}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function marry(address newSpouse) public nonReentrant {
+        require(newSpouse != address(0));
+        require(!isMarried());
+        require(newSpouse != address(this));
+        require(newSpouse is a Taxpayer ERC165);
+
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = getTaxAllowance() + newSpouse.getTaxAllowance();
+
+        newSpouse.acceptMarriage(address(this));
+        assert(newSpouse.getSpouse() == address(this));
+    }
+
+    function acceptMarriage(address newSpouse) external nonReentrant {
+        require(newSpouse is a Taxpayer ERC165);
+        require(msg.sender == newSpouse);
+        require(!isMarried());
+
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+    }
+\end{lstlisting}
+	\caption{
+		Solidity design of the \textbf{marry} method. It calls the \texttt{acceptMarriage} function on the spouse's address.
+	}
+	\label{code:marry}
+\end{figure}
+
+The implementation can be read in figures \ref{code:V_spouse}
+\ref{code:marry}.
+
+Below is the screenshot where I execute fuzz testing on both the original contract and my described implementation.
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/funziona.jpg}}
+	\caption{
+		Correct Echidna output.
+	}
+	\label{echidna:corretto_es1}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/non_funziona_marry.jpg}}
+	\caption{
+		Correct Echidna output.
+	}
+	\label{echidna:sbagliato_es1}
+\end{figure}
+
+\subsection{Echidna Configuration}
+
+To verify that the invariant is respected, there are two possible ways to do it with Echidna.
+
+Defining the invariants directly in the smart contract of interest (\textbf{Taxpayer.sol}); this works as long as the invariant
+must be verified locally in a Taxpayer instance.
+However, invariant \ref{V_spouse} concerns multiple Taxpayer instances.
+
+By default, \textbf{Echidna} instantiates the contract only once and then performs fuzz testing on the reference contract; it
+will not try to instantiate the contract multiple times to verify that the invariant remains true. The most \textbf{Echidna} would do
+is try to marry itself.
+
+Therefore, a different solution must be found.
+
+\textbf{Echidna} has the ability to define its internal configurations inside a \text{yaml} file
+; a flag that can be activated is \textbf{allContracts}. If defined as \textbf{true}, then \textbf{Echidna} will perform fuzz testing not only
+on the reference contract, but also on all contracts that the reference contract has instantiated.
+
+Therefore, another possible solution is to write a new contract, called \textbf{EchidnaTesting}, where its constructor
+instantiates various \textbf{Taxpayer} class objects and adds them to an array of Taxpayers.
+
+The invariants, therefore, must not be added to the \textbf{Taxpayer} contract, but to the new test contract.
+
+For the purpose of this project, 8 Taxpayers were instantiated, 2 of whom are over 65.
+
+Thus, \textbf{Echidna} will try to marry different combinations of these 8 Taxpayers trying to make the invariant false.
+
+Reentrancy attacks are not possible since all Taxpayers were created by a trusted party.
+
+
+\section{Exercise 2}
+
+\subsection{Analysis}
+\begin{figure}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+  function marry(address newSpouse) public {
+        require(newSpouse != address(0));
+        require(!isMarried());
+        require(newSpouse != address(this));
+        require(factory.isTaxpayer(newSpouse));
+
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+
+        ITaxpayer(newSpouse).acceptMarriage(address(this));
+        assert(newSpouse.getSpouse() == address(this));
+        assert(newSpouse.getMaxTaxAllowance() == marriage.maxAllowance);
+    }
+
+    function acceptMarriage(address newSpouse) external {
+        require(doesContractImplementInterface(newSpouse, type(ITaxpayer).interfaceId));
+        require(msg.sender == newSpouse, "Caller must be the spouse");
+        require(!isMarried());
+
+        marriage.spouse = newSpouse;
+        marriage.maxAllowance = this.getTaxAllowance() + ITaxpayer(newSpouse).getTaxAllowance();
+    }
+\end{lstlisting}
+	\caption{
+		Solidity design of the \textbf{marry} method. It calls the \texttt{acceptMarriage} function on the spouse's address.
+		Prerequisites are modeled with the Solidity "require" construct. If the predicate is false, then
+		the transaction will be reverted.
+		Post-conditions are \textbf{asserts} since they are not needed in production, unlike
+		requires which are necessary for correct software execution.
+		However, in the testing phase, it is useful to have them because we can detect if the system state
+		is entering an invalid configuration.
+	}
+	\label{code:marry2}
+\end{figure}
+\begin{figure}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function check_spouse(uint256 index) internal view returns (bool) {
+    Taxpayer t = taxpayers[index];
+    if (t.isMarried()) {
+        return Taxpayer(t.getSpouse()).getSpouse() == address(t);
+    }
+    return true;
+}
+\end{lstlisting}
+	\caption{Solidity design of invariant \ref{V_spouse}. This function is internal, so it will not be called directly
+		by \textbf{Echidna}, but there is also a \textbf{public} function that iterates for each Taxpayer
+		instantiated by the test contract to verify that this function is true; otherwise, it fails.}
+	\label{code:V_marry2}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter2.png}}
+	\caption{
+		The figure shows the second iteration of the Agile methodology analysis phase. Everything that was true
+		for the class diagram in figure \ref{uml:agile1} is also true for this diagram.
+	}
+	\label{uml:agile2}
+\end{figure}
+
+With the conclusion of exercise 1, the first iteration of the Agile methodology was also concluded; therefore, the UML was modified
+to model the specifications of exercise 2.
+
+With the new specifications, it must be possible to move the tax allowance from one spouse to another, but with the constraint
+that the sum of the two must equal the sum of the two tax allowances at the time of marriage.
+
+This introduces a necessity to save this information when the marriage occurs.
+
+Therefore, as shown in figure \ref{uml:agile2},
+the information of the common marriage taxAllowance was added.
+
+It was recorded during the marriage, and therefore when exchanging one's own taxAllowance,
+the common taxAllowance must not be exceeded.
+
+The constraint can be expressed through first-order logic in the following way.
+
+\begin{align*}
+	 & \forall a,b \in Taxpayer : married(a,b)       \\
+	 & \implies a.taxAllowanceo + b.taxAllowance =   \\
+	 & \text{Tax allowance at the start of Marriage}
+\end{align*}
+
+\subsection{Implementation}
+
+As shown in figure \ref{code:marry2},
+the new implementation of the marry method allows saving the maximum tax allowance amount of an entire household.
+
+The code correctness was verified by implementing the constraint with Echidna as shown in figure \ref{code:V_marry2}.
+
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/funziona.jpg}}
+	\caption{
+		Correct Echidna output.
+	}
+	\label{echidna:corretto_es2}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/non_funziona_taxallowance.jpg}}
+	\caption{
+		Incorrect Echidna output.
+	}
+	\label{echidna:sbagliato_es2}
+\end{figure}
+
+
+
+\section{Exercise 3}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter3.png}}
+	\caption{
+		In the design phase of Agile iteration number 3, the behavior for the case where a Taxpayer exceeds 65 years of age was modeled.
+		Since a Taxpayer's age is calculable, the Taxpayer must claim the taxAllowance increase via the \texttt{redeemTaxAllowance} method. It has the pre-condition
+		of being at least 65 years old. For a Taxpayer, it is in their interest and responsibility to claim the taxAllowance. If the Taxpayer is married, then the \texttt{maxTaxAllowance} must be updated
+		via the \texttt{redeemTaxAllowanceOfSpouse} method.
+	}
+	\label{uml:agile3}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/redeem.png}}
+	\caption{
+		When a Taxpayer is instantiated, the contract state is `notRedeemed`. If a taxpayer is at least 65 years old, they can execute
+		the \texttt{redeemTaxAllowance} function and obtain more tax allowance. Once in the `redeemed` state, it is not possible to exit.
+	}
+	\label{uml:redeem}
+\end{figure}
+
+With the end of Echidna testing, the second iteration of the Agile cycle also ended.
+
+For the third part, we start again from the Model Driven phase of this project.
+
+Since age is now calculable, we cannot automatically increase an individual's taxAllowance
+when they turn 65. Additionally, if the Taxpayer is married, the global marriage taxAllowance must be modified.
+
+Therefore, a method called `redeemTaxAllowance` was added.
+
+It is in the interest of a taxpayer who has turned 65 to call this method as soon as they turn 65 to
+update their taxAllowance. This requires a small fee to be paid to the blockchain when turning 65, but it only needs to be done
+once in a lifetime.
+
+Therefore, we can view the operation as a finite state machine as shown in figure \ref{uml:redeem}. % TODO: image
+
+\section{Implementation}
+
+\begin{figure}
+	\label{code:V_reedem}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function echidna_reedem_check(uint256 index) internal returns (bool) {
+        Taxpayer t = taxpayers[index];
+        if (t.isReedem()) {
+            return t.age() >= 65;
+        }
+    }
+  \end{lstlisting}
+\end{figure}
+
+The added invariant verifies that if you have redeemed, then you are at least 65 years old, as shown in figure \ref{code:V_reedem}.
+
+Thanks to the pre-conditions of the \texttt{redeemTaxAllowance} method, the constraint is respected.
+
+Obviously, if a Taxpayer increases their tax allowance, the common tax allowance value with their spouse must be updated.
+
+All cases were checked with another invariant, not inserted in the report because it is too large.
+
+% TODO: add image
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/funziona.jpg}}
+	\caption{
+		Correct Echidna output.
+	}
+	\label{echidna:corretto_es3}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/non_funziona_reedem.jpg}}
+	\caption{
+		Incorrect Echidna output.
+	}
+	\label{echidna:sbagliato_es3}
+\end{figure}
+
+\section{Exercise 4}
+
+\subsection{Analysis}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/iter4.png}}
+	\caption{UML of the Analysis phase of Agile iteration number 4}
+	\label{uml:agile4}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/analysis/lottery.png}}
+	\caption{UML State Diagram of the Lottery. In the \texttt{notStarted} phase, no one can enter the lottery until it is activated. In the \texttt{started} state, Taxpayers
+		can enter the lottery. When the finite state machine enters the \texttt{ending} state, the value of a future block is saved. If that block has arrived,
+		then it is possible to draw the winner using the hash of the block where the transaction was made.
+	}
+	\label{uml:lottery}
+\end{figure}
+
+In the design phase of Agile iteration number 4, the Lottery modeling was added, as shown in figure \ref{uml:agile4}.
+A lottery must implement the following methods: \texttt{startLottery}, \texttt{join}, \texttt{endLottery}, \texttt{selectWinner}.
+
+The lottery also has an owner, which is the same as the FactoryTaxpayer.
+
+Being the trusted party, they can decide when to end or start the lottery.
+
+All references to time have been removed, since validators in the Ethereum blockchain could
+manipulate that value; therefore, it must be the trusted party's responsibility to ensure they occur after a determined
+period of time, using the real clock, not the blockchain's.
+
+The implementation was improved so that the lottery is not "disposable," but instead can be
+restarted as many times as desired; this is more gas-efficient compared to instantiating a new contract every time.
+
+A finite state machine design pattern was implemented.
+Each phase is represented by a state, where only specific operations can be performed in a certain state.
+
+The lottery code was extensively modified because it had a very important limitation.
+
+"Randomness" was managed by Taxpayers when they made their commits to the lottery, but user input cannot
+be trusted.
+
+The Ethereum blockchain was designed to solve this problem and have a much more reliable system for managing randomness.
+
+When the lottery ends, a winner is not immediately declared; instead, the block number where
+the transaction was inserted, added to a definable constant, is saved in an attribute.
+
+Therefore, Taxpayers would have to convince a large portion of the Ethereum network to create blocks with a certain hash
+to manipulate the lottery, which is unrealistic.
+
+
+The behavior is shown in figure \ref{uml:lottery}.
+
+This improves the lottery's information flow, making it more difficult for taxpayers to cheat.
+
+\subsection{Implementation}
+
+\begin{figure}
+	\label{code:V_lottery2}
+	\centering
+	\begin{lstlisting}[style=soliditystyle]
+function complete_iteration() public {
+        create_lottery();
+        joinAll();
+        endLottery();
+        wait(1 weeks); // NOTE: this make time pass one week
+        selectWinner();
+    }
+
+    function echidna_check_lottery() public view returns (bool) {
+        (address minAddress, uint256 minValue) = getMinWins();
+        (address maxAddress, uint256 maxValue) = getMaxWins();
+
+        if (wins[address(0)] > 0) return false;
+        if (total_ends < 5) return true;
+        return maxValue - minValue < 25;
+    }
+  \end{lstlisting}
+	\caption{\texttt{getMinWins} gives the smallest win value of the distribution, while \texttt{getMaxWins} gives the largest. Thus constraining that after
+		many turns, the variance must be within a certain range.}
+\end{figure}
+
+
+To constrain the lottery to function correctly, a constraint must be added
+that the variance of games won by each participating taxpayer must be within a certain range.
+
+The operation is shown in 17.% \ref{code:V_lottery2}.
+
+
+A new Test contract was created, different from the previous one. Now the \texttt{allContract} flag is false.
+
+Therefore, Echidna is forced to call only the public methods of the test contract.
+
+The only public function is the one that allows Echidna to perform a full test round.
+
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/funziona_lottery.jpg}}
+	\caption{
+		Correct Echidna output.
+	}
+	\label{echidna:corretto_es4}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/non_funziona_lottery.jpg}}
+	\caption{
+		Incorrect Echidna output.
+	}
+	\label{echidna:sbagliato_es4}
+\end{figure}
+
+
+\bibliography{bibliography}
+
+\end{document}
