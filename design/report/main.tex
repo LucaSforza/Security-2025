@@ -256,7 +256,21 @@ function marry(address newSpouse) public nonReentrant {
 
 Di seguito ecco lo screenshot dove eseguo fuzzy tesing sia sul contratto originale che nella mia implementazione descritta.
 
-% TODO: aggiungere screenshot
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/funziona.jpg}}
+	\caption{
+		Output echidna corretto.
+	}
+	\label{echidna:corretto_es1}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/non_funziona_marry.jpg}}
+	\caption{
+		Output echidna corretto.
+	}
+	\label{echidna:sbagliato_es1}
+\end{figure}
 
 \subsection{Configurazione Echidna}
 
@@ -370,10 +384,11 @@ non bisogna sforare la taxAllowance comune.
 
 Il vincolo può essere espresso attraverso la logica del primo ordine nel seguente modo.
 
-\begin{equation}
-	\forall a,b \in Taxpayer : married(a,b)
-	\implies a.taxAllowanceo + b.taxAllowance = \text{Tax allowance all'inizio del Matrimonio}
-\end{equation}
+\begin{align*}
+	 & \forall a,b \in Taxpayer : married(a,b)        \\
+	 & \implies a.taxAllowanceo + b.taxAllowance =    \\
+	 & \text{Tax allowance all'inizio del Matrimonio}
+\end{align*}
 
 \subsection{Progettazione}
 
@@ -382,7 +397,24 @@ la nuova implementazione del metodo marry permette di salvarsi la quantità mass
 
 Viene verificata la correttezza del codice è stato implementato il vincolo con echidna come mostrato in figura \ref{code:V_marry2}.
 
-% TODO: add image
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/funziona.jpg}}
+	\caption{
+		Output echidna corretto.
+	}
+	\label{echidna:corretto_es2}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/non_funziona_taxallowance.jpg}}
+	\caption{
+		Output echidna scorretto.
+	}
+	\label{echidna:sbagliato_es2}
+\end{figure}
+
+
 
 \section{Esercizio 3}
 
@@ -445,6 +477,21 @@ Ovviamente se un Taxpayer aumenta la tax allowance allora bisogna aggiornare il 
 Tutti i casi sono stati controllati con un altra invariante, non inserita nel report poichè è troppo grande.
 
 % TODO: add image
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/funziona.jpg}}
+	\caption{
+		Output echidna corretto.
+	}
+	\label{echidna:corretto_es3}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/non_funziona_reedem.jpg}}
+	\caption{
+		Output echidna scorretto.
+	}
+	\label{echidna:sbagliato_es3}
+\end{figure}
 
 \section{Esercizio 4}
 
@@ -539,7 +586,23 @@ Quindi echidna è costretto a chiamare i metodi public solo del contratto di tes
 
 L'unica funzione public è quella che permette ad echidna di fare un intero round di test.
 
-% TODO: add screenshot
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/funziona_lottery.jpg}}
+	\caption{
+		Output echidna corretto.
+	}
+	\label{echidna:corretto_es4}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centerline{\includegraphics[width=0.50\textwidth]{design/report/non_funziona_lottery.jpg}}
+	\caption{
+		Output echidna scorretto.
+	}
+	\label{echidna:sbagliato_es4}
+\end{figure}
+
 
 \bibliography{bibliography}
 
