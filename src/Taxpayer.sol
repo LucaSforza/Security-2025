@@ -86,7 +86,7 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
     }
 
     function redeemTaxAllowance() external {
-        require(!redeemed && ITaxpayer(address(this)).age() >= AGE_THREASHOLD);
+        require(!this.isReedemed() && ITaxpayer(address(this)).age() >= AGE_THREASHOLD);
         redeemed = true;
         taxAllowance += (ALLOWANCE_OAP - DEFAULT_ALLOWANCE);
         if (isMarried()) {
@@ -226,22 +226,21 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
         taxAllowance += 2000 * wins;
         // It is not required to check that the spouse implement ITaxpayer interface, we assumed so beacuse we have checked
         // it that the spouse implement this interface when we marry them TODO: dire meglio
-        // require(doesContractImplementInterface(oldSpouse, type(ITaxpayer).interfaceId), "Spouse not Taxpayer");
         marriage.spouse = address(0);
     }
 
     /* Transfer part of tax allowance to own spouse */
     function transferAllowance(uint256 change) public {
-        // require(isMarried(), "you must be married to transfer allowance");
-        // require(taxAllowance >= change, "cannot change more than the taxAllowance holded");
+        require(isMarried(), "you must be married to transfer allowance");
+        require(taxAllowance >= change, "cannot change more than the taxAllowance holded");
         taxAllowance = taxAllowance - change;
         ITaxpayer sp = ITaxpayer(address(marriage.spouse));
         sp.setTaxAllowance(sp.getTaxAllowance() + change);
-        // _assert(
-        //     sp.getTaxAllowance() + this.getTaxAllowance() == marriage.maxAllowance,
-        //     "max allowance is not consistent to sum of tax allowances"
-        // );
-        // _assert(sp.getMaxTaxAllowance() == marriage.maxAllowance, "max allowance is not consistent in cached value");
+        _assert(
+            sp.getTaxAllowance() + this.getTaxAllowance() == marriage.maxAllowance,
+            "max allowance is not consistent to sum of tax allowances"
+        );
+        _assert(sp.getMaxTaxAllowance() == marriage.maxAllowance, "max allowance is not consistent in cached value");
     }
 
     function age() public view returns (uint256) {
@@ -263,8 +262,6 @@ contract Taxpayer is ITaxpayer, ERC165Query, ReentrancyGuard {
 
     // TODO: Dire nella relazione che queste pre-condizioni devono essere vero
     function setTaxAllowance(uint256 ta) public isValid(msg.sender) {
-        // require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
-        // This pre-condition is wrong. Use ERC-165 instead
         taxAllowance = ta;
     }
 

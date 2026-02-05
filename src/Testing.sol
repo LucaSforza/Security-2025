@@ -96,7 +96,7 @@ contract EchidnaTesting {
                     spouseContribute = DEFAULT_ALLOWANCE;
                 }
                 uint256 maxAllowance = t.getTaxAllowance() + spouse.getTaxAllowance();
-                return maxAllowance != t.getMaxTaxAllowance() && maxAllowance == spouse.getMaxTaxAllowance()
+                return maxAllowance == t.getMaxTaxAllowance() && maxAllowance == spouse.getMaxTaxAllowance()
                     && maxAllowance == (DEFAULT_ALLOWANCE + spouseContribute);
             } else {
                 return t.getTaxAllowance() == DEFAULT_ALLOWANCE;
@@ -105,11 +105,21 @@ contract EchidnaTesting {
         return true;
     }
 
-    function echidna_reedem_check(uint256 index) internal returns (bool) {
+    function echidna_reedem_check(uint256 index) internal view returns (bool) {
         Taxpayer t = taxpayers[index];
         if (t.isReedemed()) {
             return t.age() >= 65;
         }
+        return true;
+    }
+
+    function echidna_reedem() public view returns (bool) {
+        for (uint256 index = 0; index < taxpayers.length; index++) {
+            if (!echidna_reedem_check(index)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     function echidna_reedem_taxAllowance() public view returns (bool) {
