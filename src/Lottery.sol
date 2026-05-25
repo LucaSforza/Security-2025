@@ -27,17 +27,6 @@ contract Lottery is ILottery, ERC165Query {
         Started
     }
 
-    event Message(string);
-
-    function _assert(bool condition, string memory message) internal {
-        if (!condition) {
-            emit Message(message);
-            emit AssertionFailed(1);
-        }
-    }
-
-    event AssertionFailed(uint256);
-
     mapping(bytes4 => bool) private supportedInterfaces;
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
@@ -45,14 +34,6 @@ contract Lottery is ILottery, ERC165Query {
     }
 
     address immutable owner;
-    mapping(uint256 => mapping(address => bool)) private joined;
-    mapping(uint256 => address[]) private listJoined;
-
-    uint256 private iteration = 0;
-    // uint256 public startTime;
-    // uint256 public revealTime;
-    // uint256 public endTime;
-    // uint256 public period;
 
     State private state;
 
@@ -60,15 +41,7 @@ contract Lottery is ILottery, ERC165Query {
 
     // Initialize the registry with the lottery period.
     constructor(FactoryTaxpayer factory, address _owner) {
-        // period = p;
-        // startTime = 0;
-        // endTime = 0;
-        owner = _owner;
-        f = factory;
-        supportedInterfaces[type(IERC165).interfaceId] = true;
-        supportedInterfaces[type(ILottery).interfaceId] = true;
-        state = State.NotStarted;
-        iteration = 0;
+    
     }
 
     // Randomness provided by this is predicatable. Use with care!
@@ -77,30 +50,22 @@ contract Lottery is ILottery, ERC165Query {
     function startLottery() public {
         require(State.NotStarted == state);
         require(msg.sender == owner);
-        state = State.Started;
     }
 
     function join(address taxpayer) public {
         require(State.Started == state);
-
         require(f.isTaxpayer(taxpayer));
-
         require(joined[iteration][taxpayer] == false, "already joined");
-        joined[iteration][taxpayer] = false;
-        listJoined[iteration].push(taxpayer);
     }
 
-    uint256 futureBlock;
-    bytes32 sealedSeed;
+    uint256 private futureBlock;
+    bytes32 private sealedSeed;
 
     function endLottery(bytes32 _sealedSeed) public {
         require(owner == msg.sender);
         require(State.Started == state, "Not good state.");
         require(listJoined[iteration].length > 0, "No one was joined.");
 
-        state = State.Ending;
-        futureBlock = block.number + 1;
-        sealedSeed = _sealedSeed;
     }
 
     function randomNumber(uint256 seed) internal view returns (uint256) {
@@ -113,10 +78,5 @@ contract Lottery is ILottery, ERC165Query {
         require(listJoined[iteration].length > 0, "No one was joined.");
         require(keccak256(abi.encodePacked(owner, seed)) == sealedSeed);
         require(block.number >= futureBlock);
-        address winner = listJoined[iteration][randomNumber(seed) % listJoined[iteration].length];
-        state = State.NotStarted;
-        iteration += 1;
-        ILotteryReceiver(winner).winLottery();
-        return winner;
     }
 }
