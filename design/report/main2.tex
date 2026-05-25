@@ -543,12 +543,13 @@ This improves the lottery's information flow, making it more difficult for taxpa
 	\label{code:V_lottery2}
 	\centering
 	\begin{lstlisting}[style=soliditystyle]
-function complete_iteration() public {
+    function complete_iteration(uint256 _seed) public {
         create_lottery();
         joinAll();
-        endLottery();
-        wait(1 weeks); // NOTE: this make time pass one week
-        selectWinner();
+        bytes32 sealSeed = keccak256(abi.encodePacked(address(this), _seed));
+        endLottery(sealSeed);
+        vm.roll(block.number + 1);
+        selectWinner(_seed);
     }
 
     function echidna_check_lottery() public view returns (bool) {
@@ -570,13 +571,16 @@ that the variance of games won by each participating taxpayer must be within a c
 
 The operation is shown in 17.% \ref{code:V_lottery2}.
 
+The owner (trusted party) have to choose a secret seed. Only the hash of the secret seed is saved in the blockchain.
+
+When the selectWinner function is executed (waiting for the due block) then the seed that was secret
+it is concatenated with the block hash, thus providing a random number that is difficult to tamper with.
 
 A new Test contract was created, different from the previous one. Now the \texttt{allContract} flag is false.
 
 Therefore, Echidna is forced to call only the public methods of the test contract.
 
 The only public function is the one that allows Echidna to perform a full test round.
-
 
 \begin{figure}[htbp]
 	\centerline{\includegraphics[width=0.50\textwidth]{design/report/funziona_lottery.jpg}}
@@ -593,7 +597,6 @@ The only public function is the one that allows Echidna to perform a full test r
 	}
 	\label{echidna:sbagliato_es4}
 \end{figure}
-
 
 \bibliography{bibliography}
 
