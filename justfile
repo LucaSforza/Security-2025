@@ -34,22 +34,22 @@ fuzz-smoke:
 
 # Run all Forge tests
 test-all:
-    forge test -vvv
+    forge test 
 
 # Run Taxpayer invariants & unit tests
 test-taxpayer:
-    forge test --match-contract TaxpayerTest -vvv
+    forge test --match-contract TaxpayerTest 
 
 # Run Lottery invariant tests
 test-lottery:
-    forge test --match-contract LotteryTest -vvv
+    forge test --match-contract LotteryTest 
 
 # Run both contract-specific test files
 test-contracts: test-taxpayer test-lottery
 
 # Run contract tests with extra fuzz runs
 test-deep:
-    FOUNDRY_FUZZ_RUNS=10000 forge test -vvv
+    FOUNDRY_FUZZ_RUNS=10000 forge test 
 
 # Display available recipes
 default:
