@@ -1,14 +1,16 @@
-# Echidna fuzzing recipes for Taxpayer + Lottery contracts
+# Test recipes for Taxpayer + Lottery contracts
 # Usage: just <recipe> [workers=8] [limit=50000]
 
 workers := "8"
 limit := "50000"
 config := "src/echidna.yaml"
 
-# Run all fuzz tests in parallel
+# ── Echidna fuzz tests ──────────────────────────────────────────
+
+# Run all Echidna tests in parallel
 fuzz-all: fuzz-taxpayer fuzz-lottery
 
-# Run only Taxpayer invariants (spouse, redeem, tax allowance)
+# Run Taxpayer invariants (spouse, redeem, tax allowance)
 fuzz-taxpayer:
     echidna src/Testing.sol \
         --contract EchidnaTesting \
@@ -16,7 +18,7 @@ fuzz-taxpayer:
         --workers {{workers}} \
         --test-limit {{limit}}
 
-# Run only Lottery invariants (win distribution fairness)
+# Run Lottery invariants (win distribution fairness)
 fuzz-lottery:
     echidna src/LotteryTesting.sol \
         --contract EchidnaTesting \
@@ -24,9 +26,30 @@ fuzz-lottery:
         --workers {{workers}} \
         --test-limit {{limit}}
 
-# Quick smoke test (low iterations)
+# Quick Echidna smoke test (low iterations)
 fuzz-smoke:
     just --justfile {{justfile()}} workers=4 limit=5000 fuzz-all
+
+# ── Forge unit + invariant tests ────────────────────────────────
+
+# Run all Forge tests
+test-all:
+    forge test -vvv
+
+# Run Taxpayer invariants & unit tests
+test-taxpayer:
+    forge test --match-contract TaxpayerTest -vvv
+
+# Run Lottery invariant tests
+test-lottery:
+    forge test --match-contract LotteryTest -vvv
+
+# Run both contract-specific test files
+test-contracts: test-taxpayer test-lottery
+
+# Run contract tests with extra fuzz runs
+test-deep:
+    FOUNDRY_FUZZ_RUNS=10000 forge test -vvv
 
 # Display available recipes
 default:
