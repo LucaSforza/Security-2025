@@ -34,15 +34,15 @@ fuzz-smoke:
 
 # Run all Forge tests
 test-all:
-    forge test 
+    forge test -j 12
 
 # Run Taxpayer invariants & unit tests
 test-taxpayer:
-    forge test --match-contract TaxpayerTest 
+    forge test --match-contract TaxpayerTest -j 12
 
 # Run Lottery invariant tests
 test-lottery:
-    forge test --match-contract LotteryTest 
+    forge test --match-contract LotteryTest -j 12
 
 # Run both contract-specific test files
 test-contracts: test-taxpayer test-lottery
