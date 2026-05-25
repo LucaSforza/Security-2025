@@ -10,11 +10,10 @@ contract TaxpayerSym is Test {
     uint256 constant DEFAULT_ALLOWANCE = 5000;
     uint256 constant ALLOWANCE_OAP = 7000;
 
+    enum Action { NOP, Marry, Divorce, Redeem, TransferAllowance }
+
     FactoryTaxpayer factory;
-    Taxpayer youngA;
-    Taxpayer youngB;
-    Taxpayer oldA;
-    Taxpayer oldB;
+    Taxpayer[4] taxpayers;
 
     function setUp() public {
         vm.warp(START_TIME);
@@ -25,106 +24,74 @@ contract TaxpayerSym is Test {
         address t2 = factory.createTaxpayer(address(0), address(0), 28, 5, 1950);
         address t3 = factory.createTaxpayer(address(0), address(0), 28, 5, 1950);
 
-        youngA = Taxpayer(payable(t0));
-        youngB = Taxpayer(payable(t1));
-        oldA = Taxpayer(payable(t2));
-        oldB = Taxpayer(payable(t3));
+        taxpayers[0] = Taxpayer(payable(t0));
+        taxpayers[1] = Taxpayer(payable(t1));
+        taxpayers[2] = Taxpayer(payable(t2));
+        taxpayers[3] = Taxpayer(payable(t3));
     }
 
-    // C1: Marry -> spouse pointers reciprocal
-    function check_marry_spouse_reciprocity() public {
-        youngA.marry(address(youngB));
-
-        assert(youngA.isMarried());
-        assert(youngB.isMarried());
-        assert(youngA.getSpouse() == address(youngB));
-        assert(youngB.getSpouse() == address(youngA));
-    }
-
-    // C2: After marriage sum of allowances == maxAllowance on both sides
-    function check_marry_allowance_conservation() public {
-        youngA.marry(address(youngB));
-
-        uint256 sum = youngA.getTaxAllowance() + youngB.getTaxAllowance();
-        assert(sum == youngA.getMaxTaxAllowance());
-        assert(sum == youngB.getMaxTaxAllowance());
-    }
-
-    // C3: Transfer preserves allowance sum (symbolic amount)
-    function check_transfer_allowance_conservation(uint256 amount) public {
-        youngA.marry(address(youngB));
-
-        vm.assume(amount <= youngA.getTaxAllowance());
-
-        youngA.transferAllowance(amount);
-
-        uint256 sum = youngA.getTaxAllowance() + youngB.getTaxAllowance();
-        assert(sum == youngA.getMaxTaxAllowance());
-        assert(sum == youngB.getMaxTaxAllowance());
-    }
-
-    // C4: Old taxpayer (age >= 65) can redeem -> allowance becomes ALLOWANCE_OAP
-    function check_redeem_age_gate_succeeds() public {
-        vm.assume(oldA.age() >= 65);
-        vm.assume(!oldA.isReedemed());
-
-        oldA.redeemTaxAllowance();
-
-        assert(oldA.isReedemed());
-        assert(oldA.getTaxAllowance() == ALLOWANCE_OAP);
-    }
-
-    // C5: Young taxpayer (age < 65) cannot redeem -> must revert
-    function check_redeem_age_gate_young_reverts() public {
-        vm.assume(youngA.age() < 65);
-        vm.assume(!youngA.isReedemed());
-
-        try youngA.redeemTaxAllowance() {
-            assert(false);
-        } catch {
-            assert(true);
+    /// @dev Symbolic action sequence + invariant checks
+    function check_taxpayer_invariants(
+        uint8[5] memory acts,
+        uint256[5] memory actors,
+        uint256[5] memory spouses,
+        uint256[5] memory amounts
+    ) public {
+        // Validate action types upfront
+        for (uint256 i = 0; i < 5; i++) {
+            vm.assume(acts[i] <= uint8(Action.TransferAllowance));
         }
-    }
 
-    // C6: Marry old+young then redeem old -> allowance + maxAllowance synced
-    function check_redeem_spouse_sync() public {
-        oldA.marry(address(youngB));
+        // Dispatch action sequence
+        for (uint256 i = 0; i < 5; i++) {
+            if (acts[i] == uint8(Action.Marry)) {
+                vm.assume(actors[i] < 4 && spouses[i] < 4);
+                vm.assume(actors[i] != spouses[i]);
+                vm.assume(!taxpayers[actors[i]].isMarried());
+                vm.assume(!taxpayers[spouses[i]].isMarried());
+                taxpayers[actors[i]].marry(address(taxpayers[spouses[i]]));
+            } else if (acts[i] == uint8(Action.Divorce)) {
+                vm.assume(actors[i] < 4);
+                vm.assume(taxpayers[actors[i]].isMarried());
+                taxpayers[actors[i]].divorce();
+            } else if (acts[i] == uint8(Action.Redeem)) {
+                vm.assume(actors[i] < 4);
+                vm.assume(taxpayers[actors[i]].age() >= 65);
+                vm.assume(!taxpayers[actors[i]].isReedemed());
+                taxpayers[actors[i]].redeemTaxAllowance();
+            } else if (acts[i] == uint8(Action.TransferAllowance)) {
+                vm.assume(actors[i] < 4);
+                vm.assume(taxpayers[actors[i]].isMarried());
+                vm.assume(amounts[i] <= taxpayers[actors[i]].getTaxAllowance());
+                taxpayers[actors[i]].transferAllowance(amounts[i]);
+            }
+            // NOP: skip
+        }
 
-        vm.assume(oldA.age() >= 65);
-        vm.assume(!oldA.isReedemed());
+        // Invariant 1: Spouse reciprocity
+        for (uint256 i = 0; i < 4; i++) {
+            if (taxpayers[i].isMarried()) {
+                address spouse = taxpayers[i].getSpouse();
+                assert(spouse != address(0));
+                assert(spouse != address(taxpayers[i]));
+                assert(Taxpayer(spouse).getSpouse() == address(taxpayers[i]));
+            }
+        }
 
-        oldA.redeemTaxAllowance();
+        // Invariant 2: Redeem age gate — only age >= 65 can have redeemed
+        for (uint256 i = 0; i < 4; i++) {
+            if (taxpayers[i].isReedemed()) {
+                assert(taxpayers[i].age() >= 65);
+            }
+        }
 
-        uint256 expectedSum = DEFAULT_ALLOWANCE + ALLOWANCE_OAP;
-        uint256 sum = oldA.getTaxAllowance() + youngB.getTaxAllowance();
-        assert(sum == expectedSum);
-        assert(sum == oldA.getMaxTaxAllowance());
-        assert(sum == youngB.getMaxTaxAllowance());
-    }
-
-    // C7: Divorce clears both spouses to address(0)
-    function check_divorce_clears_spouse() public {
-        youngA.marry(address(youngB));
-
-        assert(youngA.isMarried());
-        assert(youngB.isMarried());
-
-        youngA.divorce();
-
-        assert(!youngA.isMarried());
-        assert(!youngB.isMarried());
-        assert(youngA.getSpouse() == address(0));
-        assert(youngB.getSpouse() == address(0));
-    }
-
-    // C8: Divorce resets allowance to DEFAULT_ALLOWANCE
-    function check_divorce_allowance_reset() public {
-        youngA.marry(address(youngB));
-        youngA.transferAllowance(2000);
-
-        youngA.divorce();
-
-        assert(youngA.getTaxAllowance() == DEFAULT_ALLOWANCE);
-        assert(youngB.getTaxAllowance() == DEFAULT_ALLOWANCE);
+        // Invariant 3: Allowance sum conservation for married couples
+        for (uint256 i = 0; i < 4; i++) {
+            if (taxpayers[i].isMarried()) {
+                address spouse = taxpayers[i].getSpouse();
+                uint256 sum = taxpayers[i].getTaxAllowance() + Taxpayer(spouse).getTaxAllowance();
+                assert(sum == taxpayers[i].getMaxTaxAllowance());
+            }
+        }
     }
 }

@@ -2,4 +2,6 @@
 early_exit = true
 solver_timeout_assertion = 30000
 solver_timeout_branching = 1
-loop = 3
+loop = 5
+
+solver = "z3"
