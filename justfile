@@ -51,6 +51,20 @@ test-contracts: test-taxpayer test-lottery
 test-deep:
     FOUNDRY_FUZZ_RUNS=10000 forge test 
 
+# ── Halmos symbolic tests ──────────────────────────────────────────
+
+# Run all Halmos symbolic tests
+halmos-all:
+    halmos --verbose
+
+# Run Taxpayer symbolic tests
+halmos-taxpayer:
+    halmos --match-contract TaxpayerSym --verbose
+
+# Run Lottery symbolic tests
+halmos-lottery:
+    halmos --match-contract LotterySym --verbose
+
 # Display available recipes
 default:
     @just --list
